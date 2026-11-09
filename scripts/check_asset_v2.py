@@ -252,6 +252,17 @@ def main():
         round(max(p.y for p in shoe_pts) - min(p.y for p in shoe_pts), 3),
         round(max(p.z for p in shoe_pts) - min(p.z for p in shoe_pts), 3),
     ]
+    ca, sa = math.cos(B.SHOE_TOE_OUT), math.sin(B.SHOE_TOE_OUT)
+    lx, ly = [], []
+    for p in shoe_pts:
+        dx, dy = p.x - B.SHOE_X, p.y
+        lx.append(dx * ca + dy * sa)
+        ly.append(-dx * sa + dy * ca)
+    report["shoe_local"] = [
+        round(max(lx) - min(lx), 3),
+        round(max(ly) - min(ly), 3),
+        round(max(p.z for p in shoe_pts) - min(p.z for p in shoe_pts), 3),
+    ]
     report["shoe_visible_h"] = round(min(p.z for p in shell_pts) - 0.0, 3)
 
     # ---- 6. hidden performer is fully inside the suit ----
