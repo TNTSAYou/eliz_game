@@ -338,8 +338,9 @@ def shell_radius(z):
 
 
 def wall_t(z):
-    """Fabric thickness: thin folded edge at the hem, full thickness above."""
-    return WALL_MIN + (WALL_MAX - WALL_MIN) * _smoothstep((z - HEM_Z) / 0.10)
+    """Fabric thickness: thin folded edge, thick rolled cuff just above it."""
+    t = WALL_MIN + (WALL_MAX - WALL_MIN) * _smoothstep((z - HEM_Z) / 0.10)
+    return t + 0.030 * math.exp(-((z - (HEM_Z + 0.045)) / 0.038) ** 2)
 
 
 def inner_r(z):
@@ -788,7 +789,7 @@ def build_eyes(colls):
 
 
 TOES = (-0.90, 0.0, 0.90)
-TOE_W = 0.40
+TOE_W = 0.30
 
 
 def _toe_shape(theta):
@@ -817,7 +818,7 @@ def _shoe_outline(theta):
         base = SHOE_HALF_W + (SHOE_LEN_F - SHOE_HALF_W) * c ** 0.9
     else:
         base = SHOE_HALF_W + (SHOE_LEN_B - SHOE_HALF_W) * (-c) ** 0.9
-    return base - 0.020 + 0.130 * _toe_shape(theta)
+    return base - 0.020 + 0.135 * _toe_shape(theta)
 
 
 def _shoe_height(u, theta=0.0):
