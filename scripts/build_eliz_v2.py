@@ -543,6 +543,37 @@ def build_shell(colls):
     return shell
 
 
+def build_hem_puddle(colls):
+    """Fabric pooled around the hem: a wavy low roll lying on the floor."""
+    seg, ring = 128, 10
+    verts, faces = [], []
+    for i in range(seg):
+        a = 2.0 * math.pi * i / seg
+        R = 0.462 + 0.030 * math.sin(a * 5.0 + 1.2) + 0.012 * math.sin(a * 9.0 + 0.4)
+        zc = 0.030 + 0.010 * math.sin(a * 5.0 + 0.6)
+        minor = 0.028 + 0.008 * max(0.0, math.sin(a * 5.0 + 1.2))
+        ca, sa = math.cos(a), math.sin(a)
+        n = Vector((ca, sa / DEPTH_RATIO, 0.0)).normalized()
+        for j in range(ring):
+            b = 2.0 * math.pi * j / ring
+            pnt = Vector((R * ca, R * DEPTH_RATIO * sa, zc)) + n * (minor * math.cos(b))
+            pnt.z += minor * math.sin(b)
+            verts.append(tuple(pnt))
+    for i in range(seg):
+        for j in range(ring):
+            a0 = i * ring + j
+            b0 = i * ring + (j + 1) % ring
+            c0 = ((i + 1) % seg) * ring + (j + 1) % ring
+            d0 = ((i + 1) % seg) * ring + j
+            faces.append((a0, b0, c0, d0))
+    obj = add_mesh("SUIT_HemPuddle", verts, faces, "M_Suit", colls["SUIT"])
+    recalc_normals(obj)
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+    apply_cylindrical_uv(obj)
+    return obj
+
+
 def build_hem_roll(colls):
     """Rolled hem: a soft fabric roll wrapped around the bottom edge."""
     rx = body_r(HEM_Z) - 0.002
@@ -824,16 +855,15 @@ def _shoe_outline(theta):
 def _shoe_height(u, theta=0.0):
     """Puffy instep, thin webbing, three toe ridges."""
     h = SHOE_SOLE + (SHOE_TOP - SHOE_SOLE) * max(0.0, 1.0 - u ** 3) ** 0.42
-    h += 0.070 * _toe_shape(theta) ** 0.8 * u ** 2
     return h
 
 
 def _slot_cutter(sx, ang):
     """Thin wedge that cuts a real gap between two toes (toe-out frame included)."""
     ca, sa = math.cos(SHOE_TOE_OUT), math.sin(SHOE_TOE_OUT)
-    r0, r1, z0, z1 = 0.30, 0.62, -0.02, 0.24
+    r0, r1, z0, z1 = 0.30, 0.62, -0.02, 0.085
     pts = []
-    for r, w in ((r0, 0.002), (r1, 0.028)):
+    for r, w in ((r0, 0.004), (r1, 0.048)):
         for side in (-1, 1):
             lx = r * math.sin(ang) + side * w * math.cos(ang)
             ly = -r * math.cos(ang) + side * w * math.sin(ang)
@@ -891,7 +921,7 @@ def build_shoes(colls):
             faces.append((sole_c, sole[(j + 1) % seg], sole[j]))
         objs[side] = add_mesh(f"DUCKSHOE_{side}", verts, faces, "M_Bill", colls["SUIT"])
         recalc_normals(objs[side])
-        for ang in (-0.25, 0.25):
+        for ang in (-0.31, 0.31):
             cv, cf = _slot_cutter(sx, ang)
             cutter = add_mesh("_Slot", cv, cf, "M_Bill", colls["SUIT"], smooth=False)
             recalc_normals(cutter)
