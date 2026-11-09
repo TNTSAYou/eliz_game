@@ -327,7 +327,7 @@ def body_r(z):
         u = min(1.0, (z - DOME_Z0) / DOME_H)
         return BODY_R * max(0.0, 1.0 - u ** 3) ** DOME_P
     flare = 1.0 + (HEM_FLARE - 1.0) * (1.0 - _smoothstep((z - HEM_Z) / 0.18))
-    flare += 0.040 * (1.0 - _smoothstep((z - HEM_Z) / 0.18))     # fabric spreads on the floor
+    flare += 0.055 * (1.0 - _smoothstep((z - HEM_Z) / 0.20))     # fabric spreads on the floor
     roll = 0.016 * math.exp(-((z - (HEM_Z + 0.026)) / 0.026) ** 2)   # folded hem
     return BODY_R * flare + roll
 
@@ -472,7 +472,7 @@ def apply_folds(obj):
         fold = 0.0050 * math.sin(ang * 9.0 + 0.6) * fall
         fold += 0.0025 * math.sin(ang * 14.0 + 2.1) * fall
         fold += 0.0100 * math.sin(ang * 13.0 + 0.9) * pool ** 1.5
-        fold += 0.0180 * math.sin(ang * 7.0 + 2.2) * pool ** 2
+        fold += 0.0240 * math.sin(ang * 7.0 + 2.2) * pool ** 2
         lump = 0.0028 * noise.noise(p * 3.2) + 0.0012 * noise.noise(p * 7.5)
         guard = _smoothstep((p.z - (HEM_Z + 0.012)) / 0.04)
         radial = Vector((p.x, p.y / DEPTH_RATIO, 0.0))
@@ -788,7 +788,7 @@ def build_eyes(colls):
     return objs
 
 
-TOES = (-0.90, 0.0, 0.90)
+TOES = (-0.80, 0.0, 0.80)
 TOE_W = 0.30
 
 
@@ -818,7 +818,7 @@ def _shoe_outline(theta):
         base = SHOE_HALF_W + (SHOE_LEN_F - SHOE_HALF_W) * c ** 0.9
     else:
         base = SHOE_HALF_W + (SHOE_LEN_B - SHOE_HALF_W) * (-c) ** 0.9
-    return base - 0.020 + 0.135 * _toe_shape(theta)
+    return base - 0.020 + 0.115 * _toe_shape(theta)
 
 
 def _shoe_height(u, theta=0.0):
@@ -826,6 +826,24 @@ def _shoe_height(u, theta=0.0):
     h = SHOE_SOLE + (SHOE_TOP - SHOE_SOLE) * max(0.0, 1.0 - u ** 3) ** 0.42
     h += 0.070 * _toe_shape(theta) ** 0.8 * u ** 2
     return h
+
+
+def _slot_cutter(sx, ang):
+    """Thin wedge that cuts a real gap between two toes (toe-out frame included)."""
+    ca, sa = math.cos(SHOE_TOE_OUT), math.sin(SHOE_TOE_OUT)
+    r0, r1, z0, z1 = 0.30, 0.62, -0.02, 0.24
+    pts = []
+    for r, w in ((r0, 0.002), (r1, 0.028)):
+        for side in (-1, 1):
+            lx = r * math.sin(ang) + side * w * math.cos(ang)
+            ly = -r * math.cos(ang) + side * w * math.sin(ang)
+            wx = lx * ca - ly * sa
+            wy = lx * sa + ly * ca
+            for z in (z0, z1):
+                pts.append((sx * (SHOE_X + wx), wy + SHOE_Y, z))
+    faces = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4),
+             (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
+    return pts, faces
 
 
 def build_shoes(colls):
@@ -873,6 +891,11 @@ def build_shoes(colls):
             faces.append((sole_c, sole[(j + 1) % seg], sole[j]))
         objs[side] = add_mesh(f"DUCKSHOE_{side}", verts, faces, "M_Bill", colls["SUIT"])
         recalc_normals(objs[side])
+        for ang in (-0.25, 0.25):
+            cv, cf = _slot_cutter(sx, ang)
+            cutter = add_mesh("_Slot", cv, cf, "M_Bill", colls["SUIT"], smooth=False)
+            recalc_normals(cutter)
+            _boolean(objs[side], cutter, "DIFFERENCE")
     return objs
 
 
