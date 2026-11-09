@@ -1,4 +1,4 @@
-"""Re-import art/exports/eliz_costume_v2.glb into a clean scene and check it.
+﻿"""Re-import art/exports/eliz_costume_v2.glb into a clean scene and check it.
 
 Run:
     & "D:\\tools\\blender-4.5.15-windows-x64\\blender.exe" --background --factory-startup `
@@ -72,8 +72,8 @@ def main():
     problems = []
     if not (1.79 <= height <= 1.81):
         problems.append(f"height {height:.3f} != 1.80")
-    if bones != 30:
-        problems.append(f"bones {bones} != 30")
+    if bones != 32:
+        problems.append(f"bones {bones} != 32")
     if len(actions) < 2:
         problems.append(f"actions {actions} < 2")
     if not (24000 <= tris <= 32000):
