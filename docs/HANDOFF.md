@@ -360,7 +360,7 @@ Windows 特有的约束：
 
 ### 6.1 已完成
 
-- **2026-11-09：v2 玩偶服改造完成**——`scripts\build_eliz_v2.py` 重做造型：身体+双袖布尔合并（单连通、0 边界边、16 mm 袖根倒角）、下摆 0.18 m + 24 mm 厚边、鞋 0.26 m 高（上部藏进摆内）、嘴缝弧线凹槽（中–端 0.028 m）、眼片包边；`make_fabric_textures.py` 生成 1K 可平铺绒面贴图，材质加 sheen；11 张渲染（含 4 张近景）；`check_asset_v2.py` → CHECK_OK、`verify_export_v2.py` → VERIFY_OK。
+- **2026-11-09：v2 玩偶服改造完成**——`scripts\build_eliz_v2.py` 重做造型：身体+双袖布尔合并（单连通、0 边界边、16 mm 袖根倒角）、下摆 0.18 m + 24 mm 厚边、鞋 0.26 m 高（上部藏进摆内）、嘴缝弧线凹槽（中–端 0.028 m）、眼片包边；`make_fabric_textures.py` 生成 1K 可平铺绒面贴图，材质加 sheen；11 张渲染（含 4 张近景）；`check_asset_v2.py` → CHECK_OK、`verify_export_v2.py` → VERIFY_OK。含隐藏服内人偶（9 件，0 顶点露在服外，头顶余量 0.165 m）与剖面图 `v2_wearer_cutaway.png`。
 - **2026-11-09：v1 blockout 完成**——安装 Blender 4.5.15 LTS 便携版、写 `scripts\build_eliz_v1.py`，生成壳/底口/内衬/嘴眼/鳍臂/鸭蹼/毛腿/腰胯/牌子 + 13 根骨骼 + `idle`/`run`，渲 6 张图，导出 `.blend` 与 `.glb`；`verify_export.py` 与 `check_asset.py` 均通过（高 1.800 m、13 骨、9,204 tris、2 个动作、待机 0 露腿、跑步露 0.184 m）。
 - 阅读并分析 4 张参考图。
 - 查证伊丽莎白原作设定与“中身”多层梗。
@@ -378,7 +378,7 @@ Windows 特有的约束：
 
 - 未使用 Tripo（仍为可选）。
 - 未配置 Git 身份（`user.name`/`user.email`），本机提交需临时 `-c`。
-- v2.1 待做：袖窿/下摆线迹、嘴部网格加密（消除近景台阶）、鞋与嘴加绒、服内人偶 + 剖面图、眼睑/眨眼。
+- v2.1 待做：袖窿/下摆线迹、嘴部网格加密（消除近景台阶）、鞋与嘴加绒、眼睑/眨眼。
 - 未做 walk / jump / hit / sign_talk 动画（只有 `idle` + `run`）。
 - 未选择游戏引擎，未开始游戏玩法。
 

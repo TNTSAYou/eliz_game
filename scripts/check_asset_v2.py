@@ -10,6 +10,7 @@ hard check fails. Does not save the .blend.
 """
 
 import json
+import math
 import sys
 from collections import deque
 from pathlib import Path
@@ -158,7 +159,7 @@ def main():
 
     scene = bpy.context.scene
     arm = bpy.data.objects["RIG_Eliz"]
-    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    meshes = [o for o in bpy.data.objects if o.type == "MESH" and not o.name.startswith("DEBUG_")]
     suit = sorted(o.name for o in meshes if o.name.startswith("SUIT_"))
     report = {"suit": suit}
 
@@ -253,7 +254,30 @@ def main():
     ]
     report["shoe_visible_h"] = round(min(p.z for p in shell_pts) - 0.0, 3)
 
-    # ---- 6. overall ----
+    # ---- 6. hidden performer is fully inside the suit ----
+    wearer = [o for o in bpy.data.objects if o.name.startswith("DEBUG_")]
+    outside = 0
+    wtop = -9.0
+    wlow = 9.0
+    for o in wearer:
+        for v in o.data.vertices:
+            p = v.co
+            wtop = max(wtop, p.z)
+            wlow = min(wlow, p.z)
+            if p.z >= B.HEM_Z + 0.02:
+                rr = math.hypot(p.x, p.y / B.DEPTH_RATIO)
+                if rr > B.inner_r(p.z) - 0.015:
+                    outside += 1
+            else:
+                if abs(abs(p.x) - B.SHOE_X) > 0.17 or abs(p.y) > 0.32:
+                    outside += 1
+    report["wearer_objects"] = len(wearer)
+    report["wearer_vertices"] = sum(len(o.data.vertices) for o in wearer)
+    report["wearer_outside"] = outside
+    report["wearer_top"] = round(wtop, 3)
+    report["wearer_head_clearance"] = round(1.80 - wtop, 3)
+
+    # ---- 7. overall ----
     all_pts = [p for o in meshes for p in evaluated_positions(o)]
     report["height"] = round(max(p.z for p in all_pts) - min(p.z for p in all_pts), 4)
     report["min_z"] = round(min(p.z for p in all_pts), 4)
@@ -300,6 +324,10 @@ def main():
         problems.append(f"min_z {report['min_z']}")
     if not (0.16 <= report["hem_min_z"] <= 0.20):
         problems.append(f"hem z {report['hem_min_z']}")
+    if report["wearer_outside"] > 0:
+        problems.append(f"wearer pokes out of the suit ({report['wearer_outside']} verts)")
+    if report["wearer_head_clearance"] < 0.10:
+        problems.append(f"head clearance {report['wearer_head_clearance']}m < 0.10m")
     if report["run_loop_mismatches"]:
         problems.append(f"run loop mismatch: {report['run_loop_mismatches'][:3]}")
     if problems:

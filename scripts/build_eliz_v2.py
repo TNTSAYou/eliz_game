@@ -122,6 +122,7 @@ PALETTE = {
     "M_Hair":      ("#2A211C", 0.70),
     "M_Shorts":    ("#3A3A3A", 0.85),
     "M_Sign":      ("#F7F5EE", 0.80),
+    "M_Debug":     ("#4A6FA5", 0.65),
 }
 
 MATS = {}
@@ -193,7 +194,7 @@ def clean_scene():
 def make_collections():
     scene = bpy.context.scene
     colls = {}
-    for name in ("SUIT", "INNER", "PROPS", "RIG", "RENDER"):
+    for name in ("SUIT", "INNER", "PROPS", "RIG", "RENDER", "DEBUG"):
         coll = bpy.data.collections.new(name)
         scene.collection.children.link(coll)
         colls[name] = coll
@@ -1357,6 +1358,62 @@ def render_details(cam, arm_obj):
     scene.view_settings.exposure = old_exp
 
 
+def build_wearer(colls):
+    """Hidden performer inside the suit (validation only, never exported/rendered)."""
+    objs = []
+    v, f = ellipsoid(18, 12, (0.0, 0.0, 1.20), (0.155, 0.125, 0.26))
+    objs.append(add_mesh("DEBUG_Torso", v, f, "M_Debug", colls["DEBUG"]))
+    v, f = ellipsoid(16, 10, (0.0, 0.0, 0.93), (0.150, 0.120, 0.105))
+    objs.append(add_mesh("DEBUG_Hips", v, f, "M_Debug", colls["DEBUG"]))
+    v, f = ellipsoid(16, 12, (0.0, -0.02, 1.52), (0.110, 0.110, 0.115))
+    objs.append(add_mesh("DEBUG_Head", v, f, "M_Debug", colls["DEBUG"]))
+    for side, sx in (("L", 1.0), ("R", -1.0)):
+        v, f = _tube((sx * 0.17, 0.0, 1.38), (sx * 0.215, -0.01, 0.98), 0.050, sides=10)
+        objs.append(add_mesh(f"DEBUG_Arm_{side}", v, f, "M_Debug", colls["DEBUG"]))
+        v, f = _tube((sx * 0.11, 0.0, 0.92), (sx * 0.20, 0.0, 0.12), 0.070, sides=10)
+        objs.append(add_mesh(f"DEBUG_Leg_{side}", v, f, "M_Debug", colls["DEBUG"]))
+        v, f = ellipsoid(14, 10, (sx * 0.215, -0.08, 0.09), (0.075, 0.130, 0.045))
+        objs.append(add_mesh(f"DEBUG_Foot_{side}", v, f, "M_Debug", colls["DEBUG"]))
+    for o in objs:
+        o.hide_render = True          # only shown in the cutaway render
+    return objs
+
+
+def render_wearer_cutaway(cam, shell, wearer):
+    """Bisect the suit open and show the performer inside (spec 3.3)."""
+    scene = bpy.context.scene
+    cut = shell.copy()
+    cut.data = shell.data.copy()
+    cut.name = "_Cutaway"
+    cut.data.name = "_Cutaway"
+    scene.collection.objects.link(cut)
+    bm = bmesh.new()
+    bm.from_mesh(cut.data)
+    bmesh.ops.bisect_plane(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces),
+                           plane_co=(0.0, 0.0, 0.0), plane_no=(0.0, 1.0, 0.0),
+                           clear_inner=True)
+    bm.to_mesh(cut.data)
+    bm.free()
+    for poly in cut.data.polygons:
+        poly.use_smooth = True
+
+    hidden = []
+    for o in bpy.data.objects:
+        if o.type == "MESH" and o is not cut and o.name.startswith(("SUIT_", "PROP_", "INNER_", "DUCKSHOE_")):
+            hidden.append(o)
+            o.hide_render = True
+    for o in wearer:
+        o.hide_render = False
+    place_camera(cam, (-3.4, -4.6, 1.55), (0.0, 0.0, 0.95), 2.30)
+    render_to(RENDERS / "v2_wearer_cutaway.png")
+
+    for o in hidden:
+        o.hide_render = False
+    for o in wearer:
+        o.hide_render = True
+    bpy.data.objects.remove(cut, do_unlink=True)
+
+
 # --------------------------------------------------------------------------
 # Stats / verification
 # --------------------------------------------------------------------------
@@ -1419,6 +1476,7 @@ def main():
     hair = build_hair(colls)
     pelvis = build_pelvis(colls)
     sign = build_sign(colls)
+    wearer = build_wearer(colls)
 
     arm_obj = build_armature(colls)
 
@@ -1462,6 +1520,10 @@ def main():
     # ---- macro detail shots (fabric, hem, armhole, mouth) ----
     apply_pose(arm_obj)
     render_details(cam, arm_obj)
+
+    # ---- cutaway: performer inside the suit ----
+    apply_pose(arm_obj)
+    render_wearer_cutaway(cam, shell, wearer)
 
     # ---- animations ----
     actions = build_actions(arm_obj)

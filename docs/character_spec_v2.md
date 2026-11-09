@@ -104,7 +104,7 @@ v2 算完成，要同时满足：
 | 膝 | 0.50 | 下摆 0.18 | 腿全部在摆内 |
 | 脚 | 0.26 长 | 鞋 0.55 长 | 鞋是脚的两倍长 |
 
-这张表就是"服比人大"的证据：**头上有 0.17 m 空腔、袖比手长、鞋是脚的两倍**。v2 会在 `.blend` 里放一个隐藏的 `DEBUG_Wearer` 人偶（不渲染、不导出），并用脚本校验人偶完全在外套内部；另外出一张剖面图说明。
+这张表就是"服比人大"的证据：**头上有 0.17 m 空腔、袖比手长、鞋是脚的两倍**。v2 已在 `.blend` 里放了隐藏的 `DEBUG_*` 人偶（9 件、868 顶点；不渲染、不导出），`check_asset_v2.py` 校验 **0 个顶点露在外套外**、头顶余量 **0.165 m**；剖面图见 `art/renders/v2_wearer_cutaway.png`。
 
 ---
 
@@ -384,7 +384,7 @@ v1 的脚本与产物**保留不动**，v2 另起一套，方便对照。
 ### 15.1 产物
 
 - `art/blender/eliz_costume_v2.blend`、`art/exports/eliz_costume_v2.glb`（2.67 MB，内嵌 3 张绒面贴图）
-- 渲染：`v2_front / side / back / three_quarter / run_reveal / sign_pose / front_match` + 近景 `v2_detail_hem / armhole / mouth / fabric`
+- 渲染：`v2_front / side / back / three_quarter / run_reveal / sign_pose / front_match` + 近景 `v2_detail_hem / armhole / mouth / fabric` + 服内人剖面 `v2_wearer_cutaway`
 - 脚本：`scripts/build_eliz_v2.py`、`make_fabric_textures.py`、`check_asset_v2.py`、`verify_export_v2.py`、`compare_ref.py`
 
 ### 15.2 与本文的偏差（实施后修正）
@@ -401,7 +401,8 @@ v1 的脚本与产物**保留不动**，v2 另起一套，方便对照。
 ### 15.3 验收结果
 
 - `check_asset_v2.py` → **CHECK_OK**：外壳 **单连通、0 边界边、0 非流形边**；臂根厚 0.10、袖尖权重 ≥0.85、权重和=1；壳不随腿动（Δ=0）；鞋跟脚；下颌只动下嘴（上嘴 Δ=0 / 下嘴 0.178）；**静置露腿 0**、跑动露腿 **0.184 m**；嘴缝中–端高差 **0.028 m**；下摆 0.167–0.18；高 1.800、脚底 0。
-- `verify_export_v2.py` → **VERIFY_OK**：13 骨、`idle`/`run`、29,346 tris、11 材质、3 张 `fabric_*` 贴图在 GLB 内。
+- `verify_export_v2.py` → **VERIFY_OK**：13 骨、`idle`/`run`、29,346 tris、11 材质、3 张 `fabric_*` 贴图在 GLB 内（`DEBUG_*` 人偶不入 GLB）。
+- 服内人校验：9 件人偶、868 顶点，**0 个顶点在服外**；头顶 z=1.635（壳顶 1.80，余量 **0.165 m**）；袖尖 0.62 < 手 0.98，袖比手长 0.36 m。
 - `compare_ref.py` → **剪影 IoU 0.909**（v1 为 0.925）；逐行宽度比 0.92–1.09。
 
 ### 15.4 未达项与已知限制
@@ -411,6 +412,7 @@ v1 的脚本与产物**保留不动**，v2 另起一套，方便对照。
 - 袖窿/下摆没有真正的线迹，靠 Freestyle 折痕暗示接缝。
 - 嘴部近景（0.42 m 视场）仍有轻微网格台阶；进一步加密嘴网格可消除（预算 +3k tris）。
 - 跑动时鞋口处有毛簇穿出（腿毛与鞋是两套网格，属于梗的一部分，但边缘可再收）。
+- 服内人偶是粗模（9 个基本体），只用于包络校验，不具备真实人体细节。
 
 ### 15.5 复现命令
 

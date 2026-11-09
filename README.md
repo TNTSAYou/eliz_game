@@ -64,6 +64,7 @@ eliz_game/
 | [v2_sign_pose.png](art/renders/v2_sign_pose.png) | 牌子 / 袖口姿态检查 |
 | [v2_front_match.png](art/renders/v2_front_match.png) | 与参考图同构图（600×885、黑底）的正面图 |
 | [v2_detail_hem.png](art/renders/v2_detail_hem.png) · [v2_detail_armhole.png](art/renders/v2_detail_armhole.png) · [v2_detail_mouth.png](art/renders/v2_detail_mouth.png) · [v2_detail_fabric.png](art/renders/v2_detail_fabric.png) | 近景：下摆 / 袖窿 / 嘴 / 绒面 |
+| [v2_wearer_cutaway.png](art/renders/v2_wearer_cutaway.png) | 剖面：外套里隐藏的"服内人"（验证服比人大） |
 
 ## 复现
 
