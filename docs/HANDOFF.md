@@ -339,10 +339,12 @@ root
 - 说明助手可以用 `bpy` 脚本建模，但需要先安装 Blender。
 - 建立 `docs/character_spec.md`（v0.1），固化尺寸、分件、材质、绑定、动画、验收和待决策项。
 - 建立 `art/`、`scripts/` 目录，复制 4 张参考图到 `art/refs/`。
+- 初始化独立 Git 仓库 `main` 分支，提交规格书、README 和参考图（commit `d2fc2f2`）。
 
 ### 6.2 未完成
 
 - 未安装 Blender。
+- 未配置 GitHub remote，未 push。
 - 未清理/放大参考图。
 - 未生成任何 `.blend` 或 `.glb`。
 - 未使用 Tripo，未生成草稿。
