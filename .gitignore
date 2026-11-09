@@ -1,0 +1,13 @@
+.DS_Store
+Thumbs.db
+*.blend1
+*.blend2
+*.tmp
+__pycache__/
+*.pyc
+.venv/
+
+# 生成物较大时，可按需取消注释：
+# art/exports/*.glb
+# art/exports/*.fbx
+# art/renders/*.png
