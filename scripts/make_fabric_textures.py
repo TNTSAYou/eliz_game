@@ -5,8 +5,8 @@ Run:
 
 Outputs (1K, tileable, 0.5 m per tile):
     art/textures/fabric_albedo_1k.png   (sRGB)
-    art/textures/fabric_rough_1k.png    (linear)
-    art/textures/fabric_normal_1k.png   (tangent space, linear)
+    art/textures/fabric_rough_1k.jpg    (linear)
+    art/textures/fabric_normal_1k.jpg   (tangent space, linear)
 """
 
 from pathlib import Path
@@ -89,8 +89,6 @@ rough = (np.clip(rough, 0, 1) * 255.0).astype(np.uint8)
 rough_rgb = np.dstack([rough, rough, rough])
 
 Image.fromarray(albedo_rgb).save(OUT / "fabric_albedo_1k.png", optimize=True)
-Image.fromarray(rough_rgb).save(OUT / "fabric_rough_1k.png", optimize=True)
-Image.fromarray(normal_rgb).save(OUT / "fabric_normal_1k.png", optimize=True)
-print("wrote", OUT / "fabric_albedo_1k.png")
-print("wrote", OUT / "fabric_rough_1k.png")
-print("wrote", OUT / "fabric_normal_1k.png")
+Image.fromarray(rough_rgb).save(OUT / "fabric_rough_1k.jpg", quality=92, optimize=True)
+Image.fromarray(normal_rgb).save(OUT / "fabric_normal_1k.jpg", quality=92, optimize=True)
+print("wrote", OUT / "fabric_albedo_1k.png", OUT / "fabric_rough_1k.jpg", OUT / "fabric_normal_1k.jpg")
