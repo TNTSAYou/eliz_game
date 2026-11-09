@@ -554,7 +554,7 @@ def build_arms(colls):
         for i in range(rings):
             t = i / (rings - 1)                   # 0 top -> 1 tip
             z = ARM_Z0 + (ARM_Z1 - ARM_Z0) * t
-            r = max(0.10, (1.0 - t ** 2.0) ** 0.6)
+            r = max(0.02, (1.0 - t ** 1.7) ** 0.75)
             profile.append((z, ARM_RX * r, ARM_RY * r))
         verts, faces = lathe(profile, seg, cap_top=True, cap_bottom=True)
         verts = [(x + sx * (0.480 + 0.105 * (ARM_Z0 - z) / (ARM_Z0 - ARM_Z1)),
@@ -565,15 +565,15 @@ def build_arms(colls):
 
 def _toe_bump(theta):
     s = 0.0
-    for ang in (0.44, 1.05, 1.66):          # 25 / 60 / 95 degrees, outward
+    for ang in (0.50, 1.00, 1.50):          # 29 / 57 / 86 degrees, outward
         d = (theta - ang + math.pi) % (2 * math.pi) - math.pi
-        s += math.exp(-(d / 0.22) ** 2)
+        s += math.exp(-(d / 0.135) ** 2)
     return s
 
 
 def _shoe_outline(theta):
     """Polar radius of the fan foot around the ankle (+theta = outward)."""
-    r = 0.14 + 0.26 * _toe_bump(theta)
+    r = 0.105 + 0.265 * _toe_bump(theta)
     if theta < -0.7:                        # inner side stays short
         r = min(r, 0.105)
     if abs(theta) > 2.4:                    # heel
@@ -596,13 +596,13 @@ def build_shoes(colls):
                 theta = 2.0 * math.pi * j / seg
                 R = _shoe_outline(theta) * u
                 toe = _toe_bump(theta)
-                h = 0.055 + 0.022 * toe * (0.35 + 0.65 * u) + 0.070 * (1.0 - u) ** 1.8
+                h = 0.022 + 0.058 * toe * (0.25 + 0.75 * u) + 0.105 * (1.0 - u) ** 1.6
                 dx, dy = R * math.sin(theta), -R * math.cos(theta)
                 ring.append(len(verts))
                 verts.append((x0 + sx * dx, y0 + dy, h))
             rings.append(ring)
         apex = len(verts)
-        verts.append((x0, y0, 0.125))
+        verts.append((x0, y0, 0.140))
         for j in range(seg):
             faces.append((apex, rings[0][j], rings[0][(j + 1) % seg]))
         for a, b in zip(rings, rings[1:]):
@@ -1018,7 +1018,7 @@ def setup_render_rig(colls):
     ls.linestyle = bpy.data.linestyles.new("LS_Outline")
     ls.select_silhouette = True
     ls.select_border = True
-    ls.select_crease = False
+    ls.select_crease = True
     ls.select_edge_mark = False
     ls.linestyle.color = (0.12, 0.12, 0.12)
     ls.linestyle.thickness = 4.5
@@ -1089,7 +1089,7 @@ def render_ref_match(cam, arm_obj, sign_obj):
     apply_pose(arm_obj)
     if sign_obj is not None:
         sign_obj.hide_render = True
-    place_camera(cam, (0.0, -6.0, 0.90), (0.0, 0.0, 0.90), 1.99)
+    place_camera(cam, (0.0, -6.0, 1.45), (0.0, 0.0, 0.86), 1.99)
     render_to(RENDERS / "v1_front_match.png", res=(600, 885))
 
     if sign_obj is not None:
