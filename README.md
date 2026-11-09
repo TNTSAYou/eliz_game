@@ -2,7 +2,7 @@
 
 以《银魂》伊丽莎白为核心的 3D 角色项目。
 
-> **当前阶段：v2 玩偶服改造已完成**（17 网格 / 29,346 tris / 13 骨骼 / idle + run / 正面对比剪影 IoU 0.909）。
+> **当前阶段：v3 拖地下摆 + 扁平鸭蹼**（17 网格 / 30,994 tris / 13 骨骼 / idle + run / 正面对比剪影 IoU 0.914）。
 > 平台：Windows 11 x64，仓库 `D:\work\eliz_game`；Blender 4.5.15 LTS 便携版在 `D:\tools\blender-4.5.15-windows-x64\`。
 > 产物：`art\blender\eliz_costume_v2.blend`、`art\exports\eliz_costume_v2.glb`（2.67 MB，内嵌绒面贴图）、`art\renders\v2_*.png`（11 张，含 4 张近景与参考匹配图）。
 
@@ -88,9 +88,9 @@ python scripts\compare_ref.py
 
 ## 下一步
 
-1. 看 `art\renders\` 的 11 张图，重点把 `v2_front_match.png` 和 `art/refs/eliz_front.jpg` 并排看，再看 4 张近景。
-2. 如果"厚袖/大鞋"的体积感 OK，进入 v2.1：袖窿/下摆线迹、嘴部网格加密、鞋与嘴加绒、服内人偶 + 剖面图。
-3. 如果更看重和参考图的相似度，可收窄鞋宽/袖宽把 IoU 拉回 0.93，但会牺牲"玩偶服"的体量感。
+1. 看 `art\renders\` 的渲染，重点把 `v2_front_match.png` 和 `art/refs/eliz_front.jpg` 并排看，再看 4 张近景。
+2. 如果"拖地下摆 + 扁脚"的方向 OK，进入 v3.1：脚趾改尖蹼、下摆堆叠厚度、跑动抬升重调、袖窿/下摆线迹、鞋与嘴加绒。
+3. 如果更看重和参考图的相似度，可继续收窄袖宽/调整头顶弧度（当前 IoU 0.914）。
 4. 之后再排 `walk`/`jump`/`hit` 动画与引擎接入。
 
 ## 参考图

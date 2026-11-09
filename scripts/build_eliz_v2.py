@@ -34,7 +34,7 @@ FPS = 30
 # --------------------------------------------------------------------------
 TOTAL_H = 1.80
 
-HEM_Z = 0.18             # hem height (idle); legs fully hidden
+HEM_Z = 0.02             # hem height (v3: robe reaches the floor)
 HEM_FLARE = 1.02
 BODY_R = 0.437           # half width -> 0.874 (measured: 141 px)
 DEPTH_RATIO = 0.82
@@ -79,12 +79,13 @@ LASH_LEN = 0.040
 EYE_APPLIQUE = 0.004     # felt patch thickness
 
 SHOE_X = 0.215           # ankle centre
+SHOE_Y = -0.15           # v3: feet shifted forward, robe stays behind them
 SHOE_TOE_OUT = math.radians(14.0)
 SHOE_LEN_F = 0.390       # toe reach ahead of ankle
 SHOE_LEN_B = 0.160       # heel behind ankle
 SHOE_HALF_W = 0.200      # footprint half width
-SHOE_TOP = 0.260         # shoe height (top 0.08 hidden under the hem)
-SHOE_SOLE = 0.035        # sole band height at the outline
+SHOE_TOP = 0.160         # flat foot: instep height
+SHOE_SOLE = 0.020        # thin sole band at the outline
 
 HIP_Z = 0.900
 KNEE_Z = 0.500
@@ -446,9 +447,9 @@ def _arm_solid(sx):
 
 def _cavity_solid():
     """Inner void: open at the bottom (cuts through the hem), flat ceiling."""
-    zs = [0.22, 0.26, 0.31, 0.37, 0.44, 0.52, 0.61, 0.71, 0.82, 0.93,
+    zs = [0.06, 0.10, 0.15, 0.22, 0.31, 0.40, 0.50, 0.61, 0.72, 0.83, 0.93,
           1.03, 1.12, 1.21, 1.31, 1.41, 1.50, 1.58, 1.64]
-    prof = [(0.0, 0.06), (inner_r(HEM_Z), 0.06), (inner_r(HEM_Z), HEM_Z)]
+    prof = [(0.0, -0.02), (inner_r(HEM_Z), -0.02), (inner_r(HEM_Z), HEM_Z)]
     for z in zs:
         prof.append((inner_r(z), z))
     prof.append((0.0, 1.680))          # flat inner ceiling, thick top wall
@@ -469,8 +470,12 @@ def apply_folds(obj):
         lump = 0.0028 * noise.noise(p * 3.2) + 0.0012 * noise.noise(p * 7.5)
         guard = _smoothstep((p.z - (HEM_Z + 0.015)) / 0.06)
         v.co = p + v.normal * (fold + lump) * guard
+        # fabric sags forward between the feet (fills the gap with white)
+        if p.y < 0.0 and abs(p.x) < 0.18 and p.z < 0.36:
+            w = math.exp(-(p.x / 0.10) ** 2) * (1.0 - _smoothstep((p.z - 0.04) / 0.26))
+            v.co.y -= 0.055 * w
         if p.z < HEM_Z + 0.02:            # barely wavy hem edge
-            v.co.z += 0.0015 * math.sin(ang * 9.0 + 1.0) * (1.0 - (p.z - HEM_Z) / 0.02)
+            v.co.z += 0.0030 * math.sin(ang * 9.0 + 1.0) * (1.0 - (p.z - HEM_Z) / 0.02)
     bm.to_mesh(obj.data)
     bm.free()
     for poly in obj.data.polygons:
@@ -495,7 +500,7 @@ def apply_cylindrical_uv(obj):
 
 
 def build_shell(colls):
-    zs = [HEM_Z, 0.20, 0.23, 0.27, 0.32, 0.38, 0.45, 0.53, 0.62, 0.72,
+    zs = [HEM_Z, 0.04, 0.07, 0.10, 0.14, 0.20, 0.23, 0.27, 0.32, 0.38, 0.45, 0.53, 0.62, 0.72,
           0.82, 0.92, 1.02, 1.10, 1.18, 1.27, 1.37, 1.47, 1.57, 1.65,
           1.71, 1.755, 1.782, 1.793]
     profile = [(0.0, HEM_Z)] + [(body_r(z), z) for z in zs] + [(0.0, TOTAL_H)]
@@ -775,8 +780,8 @@ def _toe_bump(theta):
     s = 0.0
     for ang in (-0.85, 0.0, 0.85):          # three webbed lobes, forward
         d = (theta - ang + math.pi) % (2 * math.pi) - math.pi
-        s += math.exp(-(d / 0.24) ** 2)
-    s -= 0.75 * math.exp(-((abs(theta) - 0.42) / 0.10) ** 2)   # notches between toes
+        s += math.exp(-(d / 0.18) ** 2)
+    s -= 1.30 * math.exp(-((abs(theta) - 0.42) / 0.08) ** 2)   # notches between toes
     return s
 
 
@@ -787,19 +792,19 @@ def _shoe_outline(theta):
         base = SHOE_HALF_W + (SHOE_LEN_F - SHOE_HALF_W) * c ** 0.9
     else:
         base = SHOE_HALF_W + (SHOE_LEN_B - SHOE_HALF_W) * (-c) ** 0.9
-    return base + 0.045 * _toe_bump(theta)
+    return base + 0.060 * _toe_bump(theta)
 
 
 def _shoe_height(u, theta=0.0):
     """Puffy top with a rolled rim; the toe lobes stand a little taller."""
     h = SHOE_SOLE + (SHOE_TOP - SHOE_SOLE) * max(0.0, 1.0 - u ** 3) ** 0.42
-    h += 0.030 * max(0.0, _toe_bump(theta)) * u ** 3
+    h += 0.035 * max(0.0, _toe_bump(theta)) * u ** 3
     return h
 
 
 def build_shoes(colls):
     objs = {}
-    seg = 48
+    seg = 64
     us = (0.08, 0.20, 0.33, 0.46, 0.59, 0.71, 0.81, 0.89, 0.95, 0.985, 1.0)
     ca, sa = math.cos(SHOE_TOE_OUT), math.sin(SHOE_TOE_OUT)
     for side, sx in (("L", 1.0), ("R", -1.0)):
@@ -815,10 +820,13 @@ def build_shoes(colls):
                 lx, ly = R * math.sin(th), -R * math.cos(th)
                 wx, wy = lx * ca - ly * sa, lx * sa + ly * ca
                 ring.append(len(verts))
-                verts.append((sx * (SHOE_X + wx), wy, h))
+                world_x = sx * (SHOE_X + wx)
+                # flat inner wall -> a 6 cm gap between the two feet
+                world_x = max(world_x, 0.030) if sx > 0 else min(world_x, -0.030)
+                verts.append((world_x, wy + SHOE_Y, h))
             rings.append(ring)
         apex = len(verts)
-        verts.append((sx * SHOE_X, 0.0, SHOE_TOP))
+        verts.append((sx * SHOE_X, SHOE_Y, SHOE_TOP))
         for j in range(seg):
             faces.append((apex, rings[0][j], rings[0][(j + 1) % seg]))
         for a, b in zip(rings, rings[1:]):
@@ -834,7 +842,7 @@ def build_shoes(colls):
         for j in range(seg):
             faces.append((rim[j], rim[(j + 1) % seg], sole[(j + 1) % seg], sole[j]))
         sole_c = len(verts)
-        verts.append((sx * SHOE_X, 0.0, 0.0))
+        verts.append((sx * SHOE_X, SHOE_Y, 0.0))
         for j in range(seg):
             faces.append((sole_c, sole[(j + 1) % seg], sole[j]))
         objs[side] = add_mesh(f"DUCKSHOE_{side}", verts, faces, "M_Bill", colls["SUIT"])

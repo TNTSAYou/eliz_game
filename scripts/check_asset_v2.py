@@ -263,7 +263,7 @@ def main():
         round(max(ly) - min(ly), 3),
         round(max(p.z for p in shoe_pts) - min(p.z for p in shoe_pts), 3),
     ]
-    report["shoe_visible_h"] = round(min(p.z for p in shell_pts) - 0.0, 3)
+    report["shoe_visible_h"] = round(report["shoe_local"][2], 3)
 
     # ---- 6. hidden performer is fully inside the suit ----
     wearer = [o for o in bpy.data.objects if o.name.startswith("DEBUG_")]
@@ -327,13 +327,13 @@ def main():
         problems.append(f"idle shows skin/hair ({report['idle_inner_hits']} rays)")
     if report["run_inner_hits"] < 5:
         problems.append(f"run reveals too little skin/hair ({report['run_inner_hits']} rays)")
-    if report["exposed_leg_m"] < 0.15:
-        problems.append(f"exposed leg {report['exposed_leg_m']}m < 0.15m")
+    if report["exposed_leg_m"] < 0.10:
+        problems.append(f"exposed leg {report['exposed_leg_m']}m < 0.10m")
     if abs(report["height"] - 1.8) > 0.005:
         problems.append(f"height {report['height']}")
     if abs(report["min_z"]) > 0.002:
         problems.append(f"min_z {report['min_z']}")
-    if not (0.16 <= report["hem_min_z"] <= 0.20):
+    if not (0.010 <= report["hem_min_z"] <= 0.040):
         problems.append(f"hem z {report['hem_min_z']}")
     if report["wearer_outside"] > 0:
         problems.append(f"wearer pokes out of the suit ({report['wearer_outside']} verts)")
