@@ -2,7 +2,7 @@
 
 | 项 | 内容 |
 |---|---|
-| 状态 | **草案 draft2 · D1/D2 已选（A ∩ / 短毛绒），其余按默认，等待整体确认** |
+| 状态 | **M1 造型 + M2 质感已实施（2026-11-09），结果见 §15；D1=A ∩、D2=短毛绒已落地** |
 | 日期 | 2026-11-09 |
 | 上游 | [character_spec.md](character_spec.md)（v1 设定与 §17 验收记录）、[HANDOFF.md](HANDOFF.md) |
 | 范围 | 只覆盖 v1 → v2 的改造；角色设定、配色、1.80 m 基准、GLB 流程不变 |
@@ -376,6 +376,53 @@ v1 的脚本与产物**保留不动**，v2 另起一套，方便对照。
 | **D4** | 是否做服内人偶+剖面图 | ① 做（隐藏、不导出） ② 只写文档不做 | ①（默认） |
 
 余下按默认执行；若要改 D3/D4 直接说。
+
+---
+
+## 15. 实施记录（2026-11-09，M1 + M2 已落地）
+
+### 15.1 产物
+
+- `art/blender/eliz_costume_v2.blend`、`art/exports/eliz_costume_v2.glb`（2.67 MB，内嵌 3 张绒面贴图）
+- 渲染：`v2_front / side / back / three_quarter / run_reveal / sign_pose / front_match` + 近景 `v2_detail_hem / armhole / mouth / fabric`
+- 脚本：`scripts/build_eliz_v2.py`、`make_fabric_textures.py`、`check_asset_v2.py`、`verify_export_v2.py`、`compare_ref.py`
+
+### 15.2 与本文的偏差（实施后修正）
+
+| 项 | 本文原定 | 实际 | 原因 |
+|---|---|---|---|
+| 袖截面厚度 | 0.100 m | **0.140 m** | 0.10 m 在侧视里像一片插在身上的鳍；加厚后成"装了棉的袖" |
+| 下摆壁厚 | 8→25 mm | **24 mm 恒定 + 16 mm 倒角** | 8 mm 边缘近景像纸片 |
+| 跑动抬升 | 0.19 m | **0.265 m** | 鞋高 0.26 挡住腿，必须多抬才露 0.18 m |
+| 袖窿缝 | 几何凹槽 + 线迹 | 布尔交线 + 16 mm 倒角 + Freestyle 折痕（暂未做线迹） | 时间；M3 可补 |
+| UV | Smart UV Project | **自写圆柱 UV（环向 6 贴、0.5 m/贴）** | 保证贴图无缝、密度均匀 |
+| 嘴 | 单网格凹槽 + 唇台 | 单网格 + 平滑唇台（避免台阶） | 初版 4 mm 硬偏移在近景出现梯步 |
+
+### 15.3 验收结果
+
+- `check_asset_v2.py` → **CHECK_OK**：外壳 **单连通、0 边界边、0 非流形边**；臂根厚 0.10、袖尖权重 ≥0.85、权重和=1；壳不随腿动（Δ=0）；鞋跟脚；下颌只动下嘴（上嘴 Δ=0 / 下嘴 0.178）；**静置露腿 0**、跑动露腿 **0.184 m**；嘴缝中–端高差 **0.028 m**；下摆 0.167–0.18；高 1.800、脚底 0。
+- `verify_export_v2.py` → **VERIFY_OK**：13 骨、`idle`/`run`、29,346 tris、11 材质、3 张 `fabric_*` 贴图在 GLB 内。
+- `compare_ref.py` → **剪影 IoU 0.909**（v1 为 0.925）；逐行宽度比 0.92–1.09。
+
+### 15.4 未达项与已知限制
+
+- **IoU 0.909 < 0.93 门槛**：v2 把 v1 的薄鳍臂换成厚袖、鞋加宽加高后，剪影比参考图"胖"约 3%；这是"玩偶服"与"手绘平面图"之间的取舍。若必须回到 0.93，可收窄鞋宽/袖宽，但会回到"不像玩偶服"的方向。
+- 布料在全身尺度偏"砂纸颗粒"，近景才像绒面；鞋和嘴仍是光滑材质（未加绒）。
+- 袖窿/下摆没有真正的线迹，靠 Freestyle 折痕暗示接缝。
+- 嘴部近景（0.42 m 视场）仍有轻微网格台阶；进一步加密嘴网格可消除（预算 +3k tris）。
+- 跑动时鞋口处有毛簇穿出（腿毛与鞋是两套网格，属于梗的一部分，但边缘可再收）。
+
+### 15.5 复现命令
+
+```powershell
+Set-Location D:\work\eliz_game
+$B = "D:\tools\blender-4.5.15-windows-x64\blender.exe"
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v2.py"
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\check_asset_v2.py"
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\verify_export_v2.py"
+python scripts\make_fabric_textures.py     # 只在改贴图时需要
+python scripts\compare_ref.py              # IoU / 逐行宽度
+```
 
 ---
 

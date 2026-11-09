@@ -2,16 +2,16 @@
 
 以《银魂》伊丽莎白为核心的 3D 角色项目。
 
-> **当前阶段：v1 blockout 已生成**（22 个网格对象 / 9,204 tris / 13 骨骼 / idle + run 两个动作 / 正面对比剪影 IoU 0.92）。
+> **当前阶段：v2 玩偶服改造已完成**（17 网格 / 29,346 tris / 13 骨骼 / idle + run / 正面对比剪影 IoU 0.909）。
 > 平台：Windows 11 x64，仓库 `D:\work\eliz_game`；Blender 4.5.15 LTS 便携版在 `D:\tools\blender-4.5.15-windows-x64\`。
-> 产物：`art\blender\eliz_costume_v1.blend`、`art\exports\eliz_costume_v1.glb`、`art\renders\v1_*.png`（7 张，含对齐参考图的 `v1_front_match.png`）。
+> 产物：`art\blender\eliz_costume_v2.blend`、`art\exports\eliz_costume_v2.glb`（2.67 MB，内嵌绒面贴图）、`art\renders\v2_*.png`（11 张，含 4 张近景与参考匹配图）。
 
 ## 项目概念
 
-这不是“一只实心白鸭子”，而是**玩偶服版**伊丽莎白：
+这不是"一只实心白鸭子"，而是**玩偶服版**伊丽莎白：
 
 ```text
-外层：白色长蛋形连体玩偶服（壳）
+外层：白色长蛋形连体玩偶服（壳 + 双袖，一张网格）
 中层：深色内衬 + 底口
 内层：毛腿大叔的腿 + 腰胯
 配件：黄色鸭蹼鞋、空白牌子
@@ -20,12 +20,13 @@
 核心表演：
 
 - **待机**：壳垂到鞋面，只看到白壳和鸭蹼鞋，看不到毛腿。
-- **奔跑**：壳上弹约 17cm，露出 15cm 以上的毛腿。
-- **大动作/彩蛋**：壳抬到约 0.50m，露出膝盖，但暂不做完整大叔脸。
+- **奔跑**：壳上弹约 0.265m，露出约 0.18m 的毛腿。
+- **大动作/彩蛋**：壳再抬高可露出膝盖，但暂不做完整大叔脸。
 
 ## 当前文档
 
-- [角色规格书 v0.1](docs/character_spec.md) —— 尺寸、分件、材质、绑定、动画、验收标准、待决策项与 v1 产出记录。
+- [角色规格书 v1](docs/character_spec.md) —— 尺寸、分件、材质、绑定、动画、验收标准、v1 产出记录。
+- [v2 优化规格书](docs/character_spec_v2.md) —— 5 条 review 意见的改造方案 + 实施记录（§15：偏差、验收、已知限制）。
 - [会话交接文档](docs/HANDOFF.md) —— 项目背景、讨论结论、当前进度与已知限制。
 
 ## 目录结构
@@ -34,30 +35,35 @@
 eliz_game/
   docs/
     character_spec.md
+    character_spec_v2.md
     HANDOFF.md
   art/
     refs/          # 参考图（版权说明见 art/refs/README.md）
-    blender/       # eliz_costume_v1.blend
-    exports/       # eliz_costume_v1.glb
-    renders/       # v1_front / side / back / three_quarter / run_reveal / sign_pose
+    blender/       # eliz_costume_v2.blend（v1 保留）
+    exports/       # eliz_costume_v2.glb（v1 保留）
+    renders/       # v2_*：四视图 / 跑动 / 举牌 / 匹配 / 4 张近景
+    textures/      # fabric_albedo / rough / normal（1K 可平铺）
   scripts/
-    build_eliz_v1.py   # 建模 + 渲染 + 导出
-    render_views.py    # 只重渲 v1_* 图
-    verify_export.py   # 重导入 GLB 并校验
-    check_asset.py     # 验收检查（拓扑/权重/壳腿隔离/遮挡）
-  tools/           # Blender 便携版解压目录（不入库）
+    build_eliz_v2.py        # 建模 + 材质 + 绑定 + 动画 + 渲染 + 导出
+    make_fabric_textures.py # 生成可平铺绒面贴图（numpy）
+    render_v2_views.py      # 只重渲 v2_* 图
+    verify_export_v2.py     # 重导入 GLB 并校验
+    check_asset_v2.py       # 验收检查（拓扑/权重/壳腿隔离/遮挡/嘴型）
+    compare_ref.py          # 与参考图的剪影 IoU / 逐行宽度
+  tools/           # 临时脚本与裁剪图（不入库）
 ```
 
-## v1 产出
+## v2 产出
 
 | 文件 | 说明 |
 |---|---|
-| [eliz_costume_v1.blend](art/blender/eliz_costume_v1.blend) | 场景 + 13 骨骼 + 渲染相机灯光 |
-| [eliz_costume_v1.glb](art/exports/eliz_costume_v1.glb) | 22 网格 + 13 骨骼 + `idle` / `run` 动画 |
-| [v1_front.png](art/renders/v1_front.png) · [v1_side.png](art/renders/v1_side.png) · [v1_back.png](art/renders/v1_back.png) · [v1_three_quarter.png](art/renders/v1_three_quarter.png) | 四视图（正交） |
-| [v1_run_reveal.png](art/renders/v1_run_reveal.png) | 壳抬起、露出毛腿 |
-| [v1_sign_pose.png](art/renders/v1_sign_pose.png) | 牌子 / 袖口姿态检查 |
-| [v1_front_match.png](art/renders/v1_front_match.png) | 与参考图同构图（600×885、黑底）的正面图 |
+| [eliz_costume_v2.blend](art/blender/eliz_costume_v2.blend) | 场景 + 13 骨骼 + 渲染相机灯光 |
+| [eliz_costume_v2.glb](art/exports/eliz_costume_v2.glb) | 17 网格 + 13 骨骼 + `idle` / `run` + 3 张绒面贴图 |
+| [v2_front.png](art/renders/v2_front.png) · [v2_side.png](art/renders/v2_side.png) · [v2_back.png](art/renders/v2_back.png) · [v2_three_quarter.png](art/renders/v2_three_quarter.png) | 四视图（正交） |
+| [v2_run_reveal.png](art/renders/v2_run_reveal.png) | 壳抬起、露出毛腿 |
+| [v2_sign_pose.png](art/renders/v2_sign_pose.png) | 牌子 / 袖口姿态检查 |
+| [v2_front_match.png](art/renders/v2_front_match.png) | 与参考图同构图（600×885、黑底）的正面图 |
+| [v2_detail_hem.png](art/renders/v2_detail_hem.png) · [v2_detail_armhole.png](art/renders/v2_detail_armhole.png) · [v2_detail_mouth.png](art/renders/v2_detail_mouth.png) · [v2_detail_fabric.png](art/renders/v2_detail_fabric.png) | 近景：下摆 / 袖窿 / 嘴 / 绒面 |
 
 ## 复现
 
@@ -65,24 +71,26 @@ eliz_game/
 Set-Location D:\work\eliz_game
 $B = "D:\tools\blender-4.5.15-windows-x64\blender.exe"
 
-# 建模 + 渲染 + 导出
-& $B --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v1.py"
+# 建模 + 渲染 + 导出（需要 art/textures 下的贴图；改了贴图先跑下一行）
+python scripts\make_fabric_textures.py
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v2.py"
 
-# 校验 GLB（重导入，检查高度/骨骼/动画/面数）
-& $B --background --factory-startup --python-exit-code 1 --python "scripts\verify_export.py"
+# 校验 GLB（重导入，检查高度/骨骼/动画/面数/贴图）
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\verify_export_v2.py"
 
-# 验收检查（拓扑/权重/壳腿隔离/下颌/待机遮挡）
-& $B --background --factory-startup --python-exit-code 1 --python "scripts\check_asset.py"
+# 验收检查（拓扑/权重/壳腿隔离/下颌/待机遮挡/嘴缝弧线）
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\check_asset_v2.py"
 
-# 只重渲，不重建
-& $B --background --factory-startup --python-exit-code 1 --python "scripts\render_views.py"
+# 与参考图比剪影
+python scripts\compare_ref.py
 ```
 
 ## 下一步
 
-1. 看 `art\renders\` 的 7 张图，重点把 `v1_front_match.png` 和 `art/refs/eliz_front.jpg` 并排看。
-2. 按反馈改 `scripts\build_eliz_v1.py` 顶部的尺寸常量，重跑即可复现。
-3. v1.5：鸭蹼脚型、牌子握持、眼睑/眨眼、赛璐璐描边与布料质感、`walk`/`jump`/`hit` 动画。
+1. 看 `art\renders\` 的 11 张图，重点把 `v2_front_match.png` 和 `art/refs/eliz_front.jpg` 并排看，再看 4 张近景。
+2. 如果"厚袖/大鞋"的体积感 OK，进入 v2.1：袖窿/下摆线迹、嘴部网格加密、鞋与嘴加绒、服内人偶 + 剖面图。
+3. 如果更看重和参考图的相似度，可收窄鞋宽/袖宽把 IoU 拉回 0.93，但会牺牲"玩偶服"的体量感。
+4. 之后再排 `walk`/`jump`/`hit` 动画与引擎接入。
 
 ## 参考图
 
