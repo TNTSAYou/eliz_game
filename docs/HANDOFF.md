@@ -15,8 +15,8 @@
 - 已确定：外壳、底口、内衬、鸭蹼鞋、毛腿、绑定方案、尺寸和验收标准。
 - 已决定：**外壳直接在 Blender 里建，不推荐用 Tripo 生成最终外壳**；Tripo 只作为比例参考或内里大叔头部的可选辅助。
 - 环境现状：Windows 11 x64；仓库 `D:\work\eliz_game`；Git 2.56（远程已配置，`main` 与 `origin/main` 同步）；**Blender 4.5.15 LTS 已装在 `D:\tools\blender-4.5.15-windows-x64\`**；`scripts\` 下 3 个脚本可用。
-- 当前进度：**v1 blockout 已生成**：23 个网格对象、8,364 tris、13 根骨骼、`idle`/`run` 两个动作；`.blend` + `.glb` + 6 张渲染已产出并通过重导入校验。未使用 Tripo。
-- 下一步：用户看 6 张渲染确认比例 → 按反馈调壳形/腿长/壳抬高度 → 再细化鞋、牌子握持、材质与描边。
+- 当前进度：**v1 blockout 已生成并按参考图重调**：22 个网格对象、9,204 tris、13 根骨骼、`idle`/`run` 两个动作；`.blend` + `.glb` + 7 张渲染（含对齐参考图的 `v1_front_match.png`）；剪影 IoU 0.92。未使用 Tripo。
+- 下一步：用户看 7 张渲染确认比例（尤其 `v1_front_match.png` 与参考图并排）→ 再细化脚扇面、牌子握持、材质与线稿。
 - 最后待确认：规格书第 12 节决策 1–5（v1 已按推荐默认值落地：A+B 风格、0.32m 跑抬、中等毛量、空白牌、深色短裤）。
 
 ---
@@ -88,7 +88,7 @@ D:\work\eliz_game\
   art\
     refs\               ← 4 张参考图（已入库）
     blender\            ← eliz_costume_v1.blend（已生成）
-    exports\            ← eliz_costume_v1.glb（已生成，287 KB）
+    exports\            ← eliz_costume_v1.glb（已生成，313 KB）
     renders\            ← v1_front/side/back/three_quarter/run_reveal/sign_pose.png（已生成）
   scripts\              ← build_eliz_v1.py / render_views.py / verify_export.py / check_asset.py（已生成）
 ```
@@ -361,7 +361,7 @@ Windows 特有的约束：
 
 ### 6.1 已完成
 
-- **2026-11-09：v1 blockout 完成**——安装 Blender 4.5.15 LTS 便携版、写 `scripts\build_eliz_v1.py`，生成壳/底口/内衬/嘴眼/鳍臂/鸭蹼/毛腿/腰胯/牌子 + 13 根骨骼 + `idle`/`run`，渲 6 张图，导出 `.blend` 与 `.glb`；`verify_export.py` 与 `check_asset.py` 均通过（高 1.800 m、13 骨、8,364 tris、2 个动作、待机 0 露腿、跑步露 0.184 m）。
+- **2026-11-09：v1 blockout 完成**——安装 Blender 4.5.15 LTS 便携版、写 `scripts\build_eliz_v1.py`，生成壳/底口/内衬/嘴眼/鳍臂/鸭蹼/毛腿/腰胯/牌子 + 13 根骨骼 + `idle`/`run`，渲 6 张图，导出 `.blend` 与 `.glb`；`verify_export.py` 与 `check_asset.py` 均通过（高 1.800 m、13 骨、9,204 tris、2 个动作、待机 0 露腿、跑步露 0.184 m）。
 - 阅读并分析 4 张参考图。
 - 查证伊丽莎白原作设定与“中身”多层梗。
 - 确定采用“玩偶服版”，而不是“生物版”。
@@ -384,7 +384,7 @@ Windows 特有的约束：
 
 ### 6.3 最后的待确认
 
-v1 已按规格书的推荐默认值落地（A+B 风格、0.32m 跑抬、中等毛量、空白牌、深色短裤），现在需要用户看 6 张渲染确认：
+v1 已按参考图重调并落地（壳宽 0.894、嘴 0.452×0.29、眼 0.16/眼距 0.33、脚扇面 1.0 m 展开、跑步壳抬 0.19 m），现在需要用户看 7 张渲染确认：
 
 1. 壳形/比例是否像（宽高比、头的圆度、裙摆收口）。
 2. 跑步露腿的高度够不够（当前 0.17m）。
@@ -531,8 +531,8 @@ v1 已按规格书的推荐默认值落地（A+B 风格、0.32m 跑抬、中等�
 当前目标：用 Blender 脚本建模“玩偶服版”伊丽莎白（Windows 11 x64，仓库 D:\work\eliz_game）。
 核心结构：白色长蛋形外壳 + 底口 + 深色内衬 + 独立鸭蹼鞋 + 壳内毛腿；跑步时外壳上弹，露出毛腿。
 已决定：外壳用 Blender 直接建，不用 Tripo 生成最终外壳；Tripo 仅作为比例参考或内里大叔头部的可选辅助。
-当前进度：v1 blockout 已生成（23 网格 / 8,364 tris / 13 骨骼 / idle+run），Blender 4.5.15 已装在 D:\tools\blender-4.5.15-windows-x64；6 张渲染与 .blend/.glb 已产出，verify_export.py + check_asset.py 均通过。
-最后待确认：用户对 6 张渲染的比例确认；规格书第 12 节决策（v1 已按推荐默认值实现）。
+当前进度：v1 blockout 已生成并按参考图重调（22 网格 / 9,204 tris / 13 骨骼 / idle+run），Blender 4.5.15 已装在 D:\tools\blender-4.5.15-windows-x64；7 张渲染与 .blend/.glb 已产出，verify_export.py + check_asset.py 均通过，正面对比剪影 IoU 0.92。
+最后待确认：用户对 7 张渲染的比例确认；规格书第 12 节决策（v1 已按参考图实测值实现）。
 
 请先看 art\renders\v1_*.png 和 docs\character_spec.md 第 17 节（v1 产出记录 + 已知简化）；再决定是调比例还是进 v1.5 细化（鸭蹼脚型 / 牌子握持 / 描边与布料 / walk+jump+hit）。
 复现：& "D:\tools\blender-4.5.15-windows-x64\blender.exe" --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v1.py"
@@ -557,3 +557,4 @@ v1 已按规格书的推荐默认值落地（A+B 风格、0.32m 跑抬、中等�
 | 2026-11-09 | **整体改写为 Windows 版**：环境表、安装与验证命令、路径、Git 状态、参考图链接全部按本机实测重写；绑定方案对齐规格书（13–15 根，去掉 `spine`/`head`）；毛簇统一为 12–16；面数预算与规格书统一；新增 Windows 环境风险一节。 |
 | 2026-11-09 | **v1 blockout 完成**：装 Blender 4.5.15 便携版，写 `build_eliz_v1.py` / `render_views.py` / `verify_export.py`；产出 6 张渲染、`.blend`、`.glb`；GLB 重导入校验通过（1.800 m / 13 骨 / idle+run）。 |
 | 2026-11-09 | **v1 验收加固**：外壳加密 + 加裙摆卷边（→ 8,364 tris）、修牌杆端 n-gon、脚踝开口居中、跑步壳抬 0.19 m；新增 `check_asset.py`：待机漏腿 0、跑步露出 0.184 m、壳腿隔离 Δ=0、鞋跟脚、下颌只动下嘴，全部 `CHECK_OK`。 |
+| 2026-11-09 | **按参考图重调（v1.1）**：逐像素量 `eliz_front.jpg` 反推尺寸（壳宽 0.894、眼 0.16/±0.165/1.535、嘴 0.452×0.29、脚扇面 0.5），壳形改为“直筒 + 椭球顶”，鸭嘴合并为单网格（上/下材质 + 下颌 `jaw` 权重），加 Freestyle 描边、加黑底同构图渲染 `v1_front_match.png`；剪影 IoU 0.92、同高度行宽基本一致。`CHECK_OK` / `VERIFY_OK` 仍通过。 |

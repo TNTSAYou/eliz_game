@@ -35,11 +35,11 @@ TOTAL_H = 1.80
 
 SHELL_Z0 = 0.15          # hem height (idle)
 SHELL_Z1 = 1.80          # top
-BODY_R = 0.425           # half width -> 0.85 wide
-DEPTH_RATIO = 0.70 / 0.85
+BODY_R = 0.447           # half width -> 0.894 wide (measured from the reference)
+DEPTH_RATIO = 0.82
 SHELL_T = 0.020
-DOME_C = 1.03            # dome origin, measured from art/refs/eliz_front.jpg
-DOME_H = 0.77            # dome height above DOME_C
+DOME_C = 1.33            # dome starts at the body's shoulder (measured)
+DOME_H = 0.47            # dome height above DOME_C (measured)
 DOME_P = 0.50            # dome profile exponent (0.5 = smooth apex)
 HEM_FLARE = 1.02
 RIM_RX = 0.250           # visible opening half width  -> 0.50 wide
@@ -47,16 +47,16 @@ RIM_RY = 0.190           # visible opening half depth  -> 0.38 deep
 
 
 BILL_Z = 1.310
-BILL_W = 0.140           # half width  -> 0.28
-EYE_Z = 1.440
-EYE_R = 0.065            # 0.13 diameter
-EYE_X = 0.090            # +-0.09 -> 0.18 spacing
-PUPIL_R = 0.0125
+BILL_W = 0.225           # half width  -> 0.45 (measured: ~0.5 of body width)
+EYE_Z = 1.535            # measured: ~16% below the top
+EYE_R = 0.080            # 0.16 diameter (measured)
+EYE_X = 0.165            # +-0.165 -> 0.33 spacing (measured)
+PUPIL_R = 0.013
 LASH_LEN = 0.040
 
-ARM_Z0 = 1.080
-ARM_Z1 = 0.620
-ARM_X = 0.470
+ARM_Z0 = 1.050
+ARM_Z1 = 0.660
+ARM_X = 0.480
 ARM_RX = 0.072           # front view width 0.14
 ARM_RY = 0.035
 
@@ -96,10 +96,10 @@ def srgb(hexstr):
 PALETTE = {
     "M_Suit":      ("#E9E9E9", 0.85),
     "M_Liner":     ("#262626", 0.95),
-    "M_Bill":      ("#FBC55B", 0.55),
-    "M_BillLower": ("#D99A2B", 0.55),
+    "M_Bill":      ("#F0B850", 0.62),
+    "M_BillLower": ("#E3AC45", 0.60),
     "M_EyeWhite":  ("#FFFFFF", 0.20),
-    "M_Pupil":     ("#111111", 0.30),
+    "M_Pupil":     ("#050505", 0.90),
     "M_Line":      ("#2B2B2B", 0.60),
     "M_Skin":      ("#C98E6B", 0.65),
     "M_Hair":      ("#2A211C", 0.70),
@@ -332,8 +332,8 @@ def recalc_normals(obj):
 
 def build_shell(colls):
     seg = 36
-    zs_body = [0.150, 0.165, 0.185, 0.210, 0.245, 0.285, 0.330, 0.385,
-               0.450, 0.525, 0.610, 0.705, 0.805, 0.910, 1.010, 1.050]
+    zs_body = [0.150, 0.168, 0.195, 0.230, 0.275, 0.330, 0.395, 0.470,
+               0.555, 0.650, 0.755, 0.870, 0.990, 1.110, 1.220, 1.330]
     profile = [(body_r(z), z) for z in zs_body]
     n = 11
     us = [math.sin(math.pi / 2.0 * i / n) for i in range(1, n + 1)]
@@ -437,7 +437,7 @@ def annulus_on_surface(cx, cz, r_in, r_out, offset, segs=24):
 
 
 def _pancake(cx, cy, cz, rx, ry, h, up=True, seg=20, rings=3):
-    """Half-ellipsoid dome with a flat base at z=cz (a duck-bill half)."""
+    """Flattened dome (superellipse crown) with a flat base at z=cz."""
     verts, faces = [], []
     rim = []
     for j in range(seg):
@@ -457,7 +457,7 @@ def _pancake(cx, cy, cz, rx, ry, h, up=True, seg=20, rings=3):
             for j in range(seg):
                 faces.append((prev[j], prev[(j + 1) % seg], apex))
             break
-        z = cz + (h if up else -h) * math.sqrt(1.0 - u * u)
+        z = cz + (h if up else -h) * math.sqrt(max(0.0, 1.0 - u ** 4))
         ring = []
         for j in range(seg):
             a = 2.0 * math.pi * j / seg
@@ -491,14 +491,32 @@ def _flat_disc(cx, cy, cz, rx, ry, seg=20, rings=2):
     return verts, faces
 
 
+def _mouth_strip(cx, cy, cz, rx, ry, rz, z0, height, seg=26):
+    """Thin dark band lying on the bill surface (the drawn mouth line)."""
+    verts, faces = [], []
+    for dz in (-height / 2.0, height / 2.0):
+        z = z0 + dz
+        for i in range(seg + 1):
+            x = -0.93 * rx + 1.86 * rx * i / seg
+            t = 1.0 - (x / rx) ** 2 - ((z - cz) / rz) ** 2
+            y = cy - ry * math.sqrt(max(0.0, t)) - 0.003
+            verts.append((x, y, z))
+    for i in range(seg):
+        faces.append((i, i + 1, seg + 2 + i, seg + 1 + i))
+    return verts, faces
+
+
 def build_bills(colls):
-    uv, uf = _pancake(0.0, -0.345, 1.345, 0.140, 0.085, 0.038, up=True)
-    upper = add_mesh("SUIT_Bill_Upper", uv, uf, "M_Bill", colls["SUIT"])
-    lv, lf = _pancake(0.0, -0.335, 1.338, 0.132, 0.078, 0.024, up=False)
-    lower = add_mesh("SUIT_Bill_Lower", lv, lf, "M_BillLower", colls["SUIT"])
-    mv, mf = _flat_disc(0.0, -0.340, 1.3415, 0.134, 0.079)
+    """One smooth duck bill; lower faces use a darker material, jaw-weighted."""
+    verts, faces = ellipsoid(32, 18, (0.0, -0.395, 1.345), (0.226, 0.100, 0.145))
+    bill = add_mesh("SUIT_Bill_Upper", verts, faces, "M_Bill", colls["SUIT"])
+    bill.data.materials.append(MATS["M_BillLower"])
+    for poly in bill.data.polygons:
+        zc = sum(bill.data.vertices[i].co.z for i in poly.vertices) / len(poly.vertices)
+        poly.material_index = 1 if zc < 1.315 else 0
+    mv, mf = _mouth_strip(0.0, -0.395, 1.345, 0.226, 0.100, 0.145, 1.315, 0.008)
     mouth = add_mesh("SUIT_Mouth_Line", mv, mf, "M_Line", colls["SUIT"])
-    return upper, lower, mouth
+    return bill, mouth
 
 
 def build_eyes(colls):
@@ -511,7 +529,7 @@ def build_eyes(colls):
         pv, pf = disc_on_surface(cx, EYE_Z, PUPIL_R, 0.010, rings=1, segs=12)
         objs[f"pupil_{side}"] = add_mesh(f"SUIT_Pupil_{side}", pv, pf, "M_Pupil", colls["SUIT"])
 
-        rv, rf = annulus_on_surface(cx, EYE_Z, EYE_R + 0.001, EYE_R + 0.009, 0.006, segs=24)
+        rv, rf = annulus_on_surface(cx, EYE_Z, EYE_R + 0.001, EYE_R + 0.006, 0.005, segs=24)
         objs[f"rim_{side}"] = add_mesh(f"SUIT_EyeRim_{side}", rv, rf, "M_Line", colls["SUIT"])
 
         lv, lf = [], []
@@ -539,22 +557,27 @@ def build_arms(colls):
             r = max(0.10, (1.0 - t ** 2.0) ** 0.6)
             profile.append((z, ARM_RX * r, ARM_RY * r))
         verts, faces = lathe(profile, seg, cap_top=True, cap_bottom=True)
-        verts = [(x + sx * (0.470 + 0.015 * (ARM_Z0 - z) / (ARM_Z0 - ARM_Z1)),
+        verts = [(x + sx * (0.480 + 0.105 * (ARM_Z0 - z) / (ARM_Z0 - ARM_Z1)),
                   y, z) for (x, y, z) in verts]
         objs[side] = add_mesh(f"SUIT_Arm_{side}", verts, faces, "M_Suit", colls["SUIT"])
     return objs
 
 
-def _shoe_outline(theta):
-    """Polar radius of a webbed duck foot. theta 0 = forward (-Y)."""
-    base = 0.145
-    toe = 0.0
-    for ang in (-0.56, 0.0, 0.56):
+def _toe_bump(theta):
+    s = 0.0
+    for ang in (0.44, 1.05, 1.66):          # 25 / 60 / 95 degrees, outward
         d = (theta - ang + math.pi) % (2 * math.pi) - math.pi
-        toe += 0.070 * math.exp(-(d / 0.26) ** 2)
-    r = base + toe
-    if abs(theta) > math.pi * 0.72:
-        r = max(r, 0.145)
+        s += math.exp(-(d / 0.22) ** 2)
+    return s
+
+
+def _shoe_outline(theta):
+    """Polar radius of the fan foot around the ankle (+theta = outward)."""
+    r = 0.14 + 0.26 * _toe_bump(theta)
+    if theta < -0.7:                        # inner side stays short
+        r = min(r, 0.105)
+    if abs(theta) > 2.4:                    # heel
+        r = min(r, 0.115)
     return r
 
 
@@ -564,39 +587,33 @@ def build_shoes(colls):
     us = (0.2, 0.4, 0.6, 0.8, 1.0)
     for side, sx in (("L", 1.0), ("R", -1.0)):
         x0 = sx * SHOE_X
-        y0 = 0.010
+        y0 = 0.0
         verts, faces = [], []
         rings = []
-        rot = -sx * 0.35   # toes splayed outwards
-        ca, sa = math.cos(rot), math.sin(rot)
         for u in us:
             ring = []
             for j in range(seg):
                 theta = 2.0 * math.pi * j / seg
                 R = _shoe_outline(theta) * u
-                toe = 0.0
-                for ang in (-0.56, 0.0, 0.56):
-                    d = (theta - ang + math.pi) % (2 * math.pi) - math.pi
-                    toe += 0.030 * math.exp(-(d / 0.30) ** 2)
-                h = 0.020 + toe * (0.35 + 0.65 * u) + 0.095 * (1.0 - u) ** 2.2
+                toe = _toe_bump(theta)
+                h = 0.055 + 0.022 * toe * (0.35 + 0.65 * u) + 0.070 * (1.0 - u) ** 1.8
                 dx, dy = R * math.sin(theta), -R * math.cos(theta)
                 ring.append(len(verts))
-                verts.append((x0 + dx * ca - dy * sa, y0 + dx * sa + dy * ca, h))
+                verts.append((x0 + sx * dx, y0 + dy, h))
             rings.append(ring)
         apex = len(verts)
-        verts.append((x0, y0, 0.100))
+        verts.append((x0, y0, 0.125))
         for j in range(seg):
             faces.append((apex, rings[0][j], rings[0][(j + 1) % seg]))
         for a, b in zip(rings, rings[1:]):
             for j in range(seg):
                 faces.append((a[j], a[(j + 1) % seg], b[(j + 1) % seg], b[j]))
-        # side wall down to the ground
         rim = rings[-1]
         bottom = []
         for j in range(seg):
             x, y, _ = verts[rim[j]]
             bottom.append(len(verts))
-            verts.append((x, y, 0.0))
+            verts.append((x0 + (x - x0) * 0.93, y0 + (y - y0) * 0.93, 0.0))
         for j in range(seg):
             faces.append((rim[j], rim[(j + 1) % seg],
                           bottom[(j + 1) % seg], bottom[j]))
@@ -604,8 +621,8 @@ def build_shoes(colls):
         verts.append((x0, y0, 0.0))
         for j in range(seg):
             faces.append((sole_c, bottom[(j + 1) % seg], bottom[j]))
-        # ankle cuff (covers the leg down to the shoe)
-        cv, cf = _collar(x0, 0.0)   # ankle opening centred on the leg
+        # ankle cuff so the leg plugs into the shoe
+        cv, cf = _collar(x0, 0.0)
         off = len(verts)
         verts += cv
         faces += [tuple(i + off for i in f) for f in cf]
@@ -615,7 +632,7 @@ def build_shoes(colls):
 
 def _collar(x0, y0):
     seg = 20
-    profile = [(0.050, 0.064, 0.064), (0.100, 0.060, 0.060), (0.162, 0.054, 0.054)]
+    profile = [(0.050, 0.078, 0.078), (0.110, 0.074, 0.074), (0.158, 0.066, 0.066)]
     verts, faces = lathe(profile, seg, cap_top=False, cap_bottom=False)
     verts = [(x + x0, y + y0, z) for (x, y, z) in verts]
     return verts, faces
@@ -686,7 +703,7 @@ def build_sign(colls):
         faces.append(quad)
 
     # rod: from the flipper tip up to the back of the board
-    start = Vector((-0.490, 0.000, ARM_Z1 + 0.020))
+    start = Vector((-0.585, 0.000, ARM_Z1))
     end = Vector((-0.850, -0.190, 0.780))
     rod_v, rod_f = _tube(start, end, 0.012, sides=8)
     off = len(verts)
@@ -735,9 +752,9 @@ BONES = [
     ("foot_R", (-SHOE_X, 0, ANKLE_Z), (-SHOE_X, -0.20, 0.060), "shin_R"),
     ("shell", (0, 0, HIP_Z), (0, 0, SHELL_Z1), "pelvis"),
     ("jaw", (0, -0.200, 1.300), (0, -0.360, 1.285), "shell"),
-    ("arm_L", (ARM_X, 0, ARM_Z0), (ARM_X, 0, ARM_Z1), "shell"),
-    ("arm_R", (-ARM_X, 0, ARM_Z0), (-ARM_X, 0, ARM_Z1), "shell"),
-    ("sign_socket", (-0.500, 0.000, ARM_Z1 + 0.010), (-0.660, -0.040, 1.020), "arm_R"),
+    ("arm_L", (ARM_X, 0, ARM_Z0), (ARM_X + 0.105, 0, ARM_Z1), "shell"),
+    ("arm_R", (-ARM_X, 0, ARM_Z0), (-(ARM_X + 0.105), 0, ARM_Z1), "shell"),
+    ("sign_socket", (-0.585, 0.000, ARM_Z1), (-0.850, -0.190, 0.780), "arm_R"),
 ]
 
 
@@ -961,7 +978,7 @@ def setup_world():
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
     bg.inputs[0].default_value = (0.28, 0.30, 0.34, 1.0)
-    bg.inputs[1].default_value = 0.55
+    bg.inputs[1].default_value = 0.63
 
 
 def add_light(name, kind, loc, energy, size=2.0, target=(0, 0, 1.0), color=(1, 1, 1)):
@@ -985,8 +1002,26 @@ def setup_render_rig(colls):
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
     scene.view_settings.view_transform = "Standard"
+    scene.view_settings.exposure = -0.28
     scene.view_settings.look = "None"
     scene.render.fps = FPS
+
+    # Freestyle gives the thin dark outline the reference art has
+    scene.render.use_freestyle = True
+    scene.render.line_thickness_mode = "ABSOLUTE"
+    view_layer = bpy.context.scene.view_layers[0]
+    view_layer.use_freestyle = True
+    fs = view_layer.freestyle_settings
+    for old_ls in list(fs.linesets):          # default linesets have no linestyle
+        fs.linesets.remove(old_ls)
+    ls = fs.linesets.new("Outline")
+    ls.linestyle = bpy.data.linestyles.new("LS_Outline")
+    ls.select_silhouette = True
+    ls.select_border = True
+    ls.select_crease = False
+    ls.select_edge_mark = False
+    ls.linestyle.color = (0.12, 0.12, 0.12)
+    ls.linestyle.thickness = 4.5
 
     cam_data = bpy.data.cameras.new("CAM_View")
     cam_data.type = "ORTHO"
@@ -995,9 +1030,9 @@ def setup_render_rig(colls):
     colls["RENDER"].objects.link(cam)
     scene.camera = cam
 
-    add_light("L_Key", "SUN", (-2.5, -3.0, 4.0), 4.0, target=(0, 0, 1.0))
-    add_light("L_Fill", "AREA", (2.6, -2.6, 2.2), 260.0, size=3.5, target=(0, 0, 1.0))
-    add_light("L_Rim", "AREA", (0.4, 3.2, 2.8), 300.0, size=2.5, target=(0, 0, 1.2))
+    add_light("L_Key", "SUN", (-2.5, -3.0, 4.0), 3.5, target=(0, 0, 1.0))
+    add_light("L_Fill", "AREA", (2.6, -2.6, 2.2), 230.0, size=3.5, target=(0, 0, 1.0))
+    add_light("L_Rim", "AREA", (0.4, 3.2, 2.8), 260.0, size=2.5, target=(0, 0, 1.2))
     return cam
 
 
@@ -1015,6 +1050,58 @@ def render_to(path, res=(800, 1000)):
     scene.render.resolution_percentage = 100
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
+
+
+def render_ref_match(cam, arm_obj, sign_obj):
+    """Front view framed like art/refs/eliz_front.jpg: flat light, black bg."""
+    scene = bpy.context.scene
+    world = scene.world
+    bg = world.node_tree.nodes["Background"]
+    old_color = tuple(bg.inputs[0].default_value)
+    old_strength = bg.inputs[1].default_value
+    old_film = scene.render.film_transparent
+    old_use_nodes = scene.use_nodes
+
+    bg.inputs[0].default_value = (0.62, 0.62, 0.62, 1.0)
+    bg.inputs[1].default_value = 0.63
+    light_energy = {}
+    for name in ("L_Key", "L_Fill", "L_Rim"):
+        light_obj = bpy.data.objects.get(name)
+        if light_obj is not None:
+            light_energy[name] = light_obj.data.energy
+            light_obj.data.energy *= 0.63
+    scene.render.film_transparent = True
+    old_exposure = scene.view_settings.exposure
+    scene.view_settings.exposure = -0.28
+
+    scene.use_nodes = True
+    tree = scene.node_tree
+    tree.nodes.clear()
+    rl = tree.nodes.new("CompositorNodeRLayers")
+    black = tree.nodes.new("CompositorNodeRGB")
+    black.outputs[0].default_value = (0.0, 0.0, 0.0, 1.0)
+    over = tree.nodes.new("CompositorNodeAlphaOver")
+    comp = tree.nodes.new("CompositorNodeComposite")
+    tree.links.new(black.outputs[0], over.inputs[1])
+    tree.links.new(rl.outputs["Image"], over.inputs[2])
+    tree.links.new(over.outputs[0], comp.inputs[0])
+
+    apply_pose(arm_obj)
+    if sign_obj is not None:
+        sign_obj.hide_render = True
+    place_camera(cam, (0.0, -6.0, 0.90), (0.0, 0.0, 0.90), 1.99)
+    render_to(RENDERS / "v1_front_match.png", res=(600, 885))
+
+    if sign_obj is not None:
+        sign_obj.hide_render = False
+    bg.inputs[0].default_value = old_color
+    bg.inputs[1].default_value = old_strength
+    scene.render.film_transparent = old_film
+    scene.view_settings.exposure = old_exposure
+    for name, energy in light_energy.items():
+        bpy.data.objects[name].data.energy = energy
+    tree.nodes.clear()
+    scene.use_nodes = old_use_nodes
 
 
 def render_all_views(cam, sign_obj=None, hide_sign_in=("front", "back", "side", "three_quarter")):
@@ -1089,7 +1176,7 @@ def main():
 
     shell, hem = build_shell(colls)
     liner = build_liner(colls)
-    bill_u, bill_l, mouth = build_bills(colls)
+    bill, mouth = build_bills(colls)
     eyes = build_eyes(colls)
     arms = build_arms(colls)
     shoes = build_shoes(colls)
@@ -1100,10 +1187,13 @@ def main():
 
     arm_obj = build_armature(colls)
 
-    suit_objs = ([shell, hem, liner, bill_u, mouth] + list(eyes.values())
+    suit_objs = ([shell, hem, liner, mouth] + list(eyes.values())
                  + list(arms.values()))
     bind_suit(colls, arm_obj, suit_objs)
-    bind_rigid(arm_obj, bill_l, "jaw")
+    # bill: upper half follows the shell, lower half follows the jaw
+    add_vertex_groups(bill, [{"shell": 1.0 - w, "jaw": w} for w in
+                             [_smoothstep((1.32 - v.co.z) / 0.03) for v in bill.data.vertices]])
+    bind(bill, arm_obj, None)
     bind_legs(arm_obj, legs, hair)
     bind_rigid(arm_obj, pelvis, "pelvis")
     bind_rigid(arm_obj, sign, "sign_socket")
@@ -1113,7 +1203,7 @@ def main():
     cam = setup_render_rig(colls)
     setup_world()
 
-    mesh_objs = suit_objs + [bill_l] + list(shoes.values()) + list(legs.values()) + [hair, pelvis, sign]
+    mesh_objs = suit_objs + [bill] + list(shoes.values()) + list(legs.values()) + [hair, pelvis, sign]
 
     # ---- idle pose renders ----
     apply_pose(arm_obj)
@@ -1130,6 +1220,9 @@ def main():
     sign.hide_render = False
     place_camera(cam, (-3.6, -4.5, 1.60), (0, 0, 0.95), 3.00)
     render_to(RENDERS / "v1_sign_pose.png")
+
+    # ---- reference-matched front view ----
+    render_ref_match(cam, arm_obj, sign)
 
     # ---- animations ----
     actions = build_actions(arm_obj)

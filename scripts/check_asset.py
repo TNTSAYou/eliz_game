@@ -179,18 +179,19 @@ def main():
     report["shell_delta_on_foot_pose"] = round(max_delta(shell_rest, shell_after_foot), 6)
 
     # ---- 4. jaw opens only the lower bill ----
-    upper = bpy.data.objects["SUIT_Bill_Upper"]
-    lower = bpy.data.objects["SUIT_Bill_Lower"]
-    up_rest = evaluated_positions(upper)
-    low_rest = evaluated_positions(lower)
+    bill = bpy.data.objects["SUIT_Bill_Upper"]
+    bill_rest = evaluated_positions(bill)
+    upper_idx = [i for i, v in enumerate(bill.data.vertices) if v.co.z > 1.40]
+    lower_idx = [i for i, v in enumerate(bill.data.vertices) if v.co.z < 1.25]
     B.apply_pose(arm)
     arm.pose.bones["jaw"].rotation_mode = "QUATERNION"
     B.pose_rotate(arm.pose.bones["jaw"], (1, 0, 0), 40.0)
     bpy.context.view_layer.update()
-    up_posed = evaluated_positions(upper)
-    low_posed = evaluated_positions(lower)
-    report["upper_bill_delta_on_jaw"] = round(max_delta(up_rest, up_posed), 6)
-    report["lower_bill_delta_on_jaw"] = round(max_delta(low_rest, low_posed), 4)
+    bill_posed = evaluated_positions(bill)
+    report["upper_bill_delta_on_jaw"] = round(
+        max((bill_posed[i] - bill_rest[i]).length for i in upper_idx), 6)
+    report["lower_bill_delta_on_jaw"] = round(
+        max((bill_posed[i] - bill_rest[i]).length for i in lower_idx), 4)
 
     # ---- 5. idle hides skin/hair, run reveals them (front ortho rays) ----
     idle_inner, idle_hits = ray_visible_inner(arm, {})
