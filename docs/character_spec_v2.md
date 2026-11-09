@@ -455,6 +455,37 @@ v3.2（同日，按参考图复核）：脚的顶面改成**光滑的拱面**，
 
 ---
 
+## 17. 跑动动画（2026-11-09）
+
+`run` 重做为 24 帧循环（30 fps，0.8 s），关键帧在 1/4/7/10/13/16/19/22/25（25 = 1）：
+
+| 通道 | 取值 | 说明 |
+|---|---|---|
+| `shell` 抬升 | 0.228 → 0.312 m | 落地压到最低、腾空抬到最高，约 8 cm 弹跳；裙摆随之起伏露出毛腿 |
+| `shell` 前倾 | −10° | 整体前倾 |
+| `shell` 侧倾 | ±1.8°（f4 / f16） | 重心左右换脚时轻微摇摆 |
+| 腿 | 大腿 −28…+26°，小腿 10…64°，脚 −12…+5° | 接触 → 下压 → 过渡 → 腾空，左右镜像；小腿最弯 64° 用来把脚收起来 |
+| 手臂 | ±18° → 0° | 与腿反相摆动，过渡帧回到 0 |
+
+另外：毛簇缩短到 0.035 m 并抬到 z≥0.34（跑动时不再从裙摆里炸出来）；下摆波浪压到 ±12 mm。
+
+渲染：`scripts/render_run_anim.py` 从 `.blend` 取 `run` 动作，渲 3/4 与侧面两个机位各 24 帧（640×800），
+再用 ffmpeg 合成：
+
+- `art/renders/v3_run.mp4` / `v3_run.gif`（3/4 视角）
+- `art/renders/v3_run_side.mp4` / `v3_run_side.gif`（侧面，看腿的交替）
+
+复现：
+
+```powershell
+$B = "D:\tools\blender-4.5.15-windows-x64\blender.exe"
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\render_run_anim.py"
+ffmpeg -y -framerate 30 -i tools\run_frames\three_quarter\frame_%03d.png `
+       -c:v libx264 -pix_fmt yuv420p -crf 18 art\renders\v3_run.mp4
+```
+
+---
+
 ## 附：与 v1 的关系
 
 - v1 的全部产物、脚本、文档保留，作为对照与回退基线；

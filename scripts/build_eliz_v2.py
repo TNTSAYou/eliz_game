@@ -485,7 +485,7 @@ def apply_folds(obj):
             v.co.y -= 0.055 * w
         if p.z < HEM_Z + 0.03:            # pool edge: fabric bunches on the floor
             t = 1.0 - (p.z - HEM_Z) / 0.03
-            v.co.z += (0.0180 * math.sin(ang * 7.0 + 2.2) + 0.0070 * math.sin(ang * 13.0 + 0.9)) * t
+            v.co.z += (0.0120 * math.sin(ang * 7.0 + 2.2) + 0.0050 * math.sin(ang * 13.0 + 0.9)) * t
             v.co.z = max(v.co.z, 0.010)
         fold = fold * (1.0 + 0.6 * (1.0 - _smoothstep((p.z - 0.02) / 0.12)))
     bm.to_mesh(obj.data)
@@ -961,13 +961,13 @@ def build_hair(colls):
     verts, faces = [], []
     for side, sx in (("L", 1.0), ("R", -1.0)):
         x0 = sx * SHOE_X
-        for k in range(16):
-            z = 0.300 + 0.022 * k
+        for k in range(12):
+            z = 0.340 + 0.024 * k
             ang = (k * 2.399) % (2 * math.pi)
             r = leg_radius(z) + 0.004
             base = Vector((x0 + r * math.cos(ang), r * math.sin(ang), z))
             out = Vector((math.cos(ang), math.sin(ang), -1.0)).normalized()
-            length = 0.045 + 0.012 * ((k * 5) % 3)
+            length = 0.035 + 0.008 * ((k * 5) % 3)
             v, f = cone(base, out, length, 0.022, 0.001, sides=4)
             off = len(verts)
             verts += v
@@ -1215,6 +1215,15 @@ def finish_action(arm_obj, name):
     return act
 
 
+def pose_rotate_pair(pb, axis_a, deg_a, axis_b, deg_b):
+    """Compose two world-axis rotations on one bone (e.g. pitch + roll)."""
+    R = pb.bone.matrix_local.to_3x3().inverted()
+    qa = Quaternion((R @ Vector(axis_a)).normalized(), math.radians(deg_a))
+    qb = Quaternion((R @ Vector(axis_b)).normalized(), math.radians(deg_b))
+    pb.rotation_mode = "QUATERNION"
+    pb.rotation_quaternion = qa @ qb
+
+
 def build_actions(arm_obj):
     actions = []
     pb = arm_obj.pose.bones
@@ -1229,19 +1238,24 @@ def build_actions(arm_obj):
             pb[name].keyframe_insert("rotation_quaternion", frame=f)
     actions.append(finish_action(arm_obj, "idle"))
 
-    # ---- run: 24 frame loop, shell lifted 0.17m and tilted back 8 deg ----
-    begin_action(arm_obj)
+    # ---- run: 24 frame loop (0.8 s), shell bouncing, legs alternating ----
+    # (frame, lift, tilt, roll, left(thigh, shin, foot), right, arm swing)
     keys = [
-        (1,  (-30, 20, 10), (25, 45, -20), 14.0),
-        (7,  (0, 55, -5), (0, 10, 0), 0.0),
-        (13, (25, 45, -20), (-30, 20, 10), -14.0),
-        (19, (0, 10, 0), (0, 55, -5), 0.0),
-        (25, (-30, 20, 10), (25, 45, -20), 14.0),
+        (1,  0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
+        (4,  0.228, -10.0,  1.8, (-12, 34, 0),  (18, 64, -6),   11.0),
+        (7,  0.272, -10.0,  1.2, (8, 58, -5),   (-10, 58, -3),   0.0),
+        (10, 0.312, -10.0,  0.0, (26, 52, -12), (-28, 48, 5),  -11.0),
+        (13, 0.240, -10.0,  0.0, (26, 58, -10), (-28, 10, 4),  -18.0),
+        (16, 0.228, -10.0, -1.8, (18, 64, -6),  (-12, 34, 0),  -11.0),
+        (19, 0.272, -10.0, -1.2, (-10, 58, -3), (8, 58, -5),    0.0),
+        (22, 0.312, -10.0,  0.0, (-28, 48, 5),  (26, 52, -12),  11.0),
+        (25, 0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
     ]
-    for f, left, right, arm_swing in keys:
+    begin_action(arm_obj)
+    for f, lift, tilt, roll, left, right, arm_swing in keys:
         reset_pose(arm_obj)
-        pose_translate(pb["shell"], (0, 0, 0.265 + 0.010 * math.sin(f / 24.0 * 2 * math.pi)))
-        pose_rotate(pb["shell"], (1, 0, 0), -8.0)
+        pose_translate(pb["shell"], (0, 0, lift))
+        pose_rotate_pair(pb["shell"], (1, 0, 0), tilt, (0, 1, 0), roll)
         pb["shell"].keyframe_insert("location", frame=f)
         pb["shell"].keyframe_insert("rotation_quaternion", frame=f)
         for name, (thigh, shin, foot) in (("L", left), ("R", right)):
