@@ -72,8 +72,8 @@ def main():
     problems = []
     if not (1.79 <= height <= 1.81):
         problems.append(f"height {height:.3f} != 1.80")
-    if bones != 13:
-        problems.append(f"bones {bones} != 13")
+    if bones != 30:
+        problems.append(f"bones {bones} != 30")
     if len(actions) < 2:
         problems.append(f"actions {actions} < 2")
     if not (24000 <= tris <= 32000):

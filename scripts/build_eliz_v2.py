@@ -1,4 +1,4 @@
-"""Build the Elizabeth "mascot costume" v2 (docs/character_spec_v2.md).
+﻿"""Build the Elizabeth "mascot costume" v2 (docs/character_spec_v2.md).
 
 Run (PowerShell):
     & "D:\\tools\\blender-4.5.15-windows-x64\\blender.exe" --background --factory-startup `
@@ -1048,6 +1048,29 @@ BONES = [
     ("sign_socket", (-0.484, 0.000, 0.640), (-0.850, -0.190, 0.780), "arm_R"),
 ]
 
+# ---- v4 soft shell: hem bones (spec 18.3) -------------------------------
+HEM_BONE_Z = (0.40, 0.22, 0.035)      # a-head / a-tail=b-head / b-tail
+HEM_BONE_R = (0.437, 0.437, 0.483)    # measured body_r at those heights
+HEM_BONES = 8
+
+
+def _hem_bone_defs():
+    defs = [("hem_root", (0, 0, HIP_Z), (0, 0, HIP_Z + 0.06), "shell")]
+    for i in range(HEM_BONES):
+        a = math.radians(i * 45.0)
+        cx, cy = math.cos(a), math.sin(a) * DEPTH_RATIO
+        za, zmid, zb = HEM_BONE_Z
+        ra, rmid, rb = HEM_BONE_R
+        head = (ra * cx, ra * cy, za)
+        mid = (rmid * cx, rmid * cy, zmid)
+        tail = (rb * cx, rb * cy, zb)
+        defs.append((f"hem_{i:02d}_a", head, mid, "hem_root"))
+        defs.append((f"hem_{i:02d}_b", mid, tail, f"hem_{i:02d}_a"))
+    return defs
+
+
+BONES += _hem_bone_defs()
+
 
 def build_armature(colls):
     arm = bpy.data.armatures.new("RIG_Eliz")
@@ -1105,18 +1128,62 @@ def add_vertex_groups(obj, per_vertex):
 
 
 def arm_weight(x, z):
-    """0 on the body, 1 on the sleeve; narrow blend across the armhole."""
+    """0 on the body, 1 on the sleeve; narrow blend across the armhole.
+
+    v4: the lower bound keeps the flared skirt off the arm bones.  The hem
+    flare is wider than body_r(z), so the old test gave hem corners up to 0.94
+    arm weight and the arms dragged the skirt (spec 18.4 A).
+    """
     w = _smoothstep((abs(x) - body_r(z) + 0.015) / 0.055)
     w *= 1.0 - _smoothstep((z - 1.20) / 0.05)
+    w *= _smoothstep((z - 0.55) / 0.05)
     return w
+
+
+def hem_weights(x, y, z):
+    """Radial skirt weights on the 8 hem chains (spec 18.4 B)."""
+    t = 1.0 - _smoothstep((z - 0.06) / 0.40)
+    if t <= 1e-4:
+        return {}
+    seg_b = 1.0 - _smoothstep((z - 0.10) / 0.10)
+    theta = math.degrees(math.atan2(y / DEPTH_RATIO, x)) % 360.0
+    u = (theta / 45.0) % HEM_BONES
+    i0 = int(math.floor(u)) % HEM_BONES
+    i1 = (i0 + 1) % HEM_BONES
+    frac = u - math.floor(u)
+    out = {}
+    for name, w in (
+        (f"hem_{i0:02d}_a", t * (1.0 - seg_b) * (1.0 - frac)),
+        (f"hem_{i1:02d}_a", t * (1.0 - seg_b) * frac),
+        (f"hem_{i0:02d}_b", t * seg_b * (1.0 - frac)),
+        (f"hem_{i1:02d}_b", t * seg_b * frac),
+    ):
+        if w > 1e-4:
+            out[name] = w
+    return out
+
+
+def _normalized(weights):
+    kept = {k: v for k, v in weights.items() if v > 1e-4}
+    total = sum(kept.values())
+    if total <= 0.0:
+        return {"shell": 1.0}
+    return {k: v / total for k, v in kept.items()}
 
 
 def bind_suit(colls, arm_obj, shell, extras):
     per = []
     for v in shell.data.vertices:
-        w = arm_weight(v.co.x, v.co.z)
-        side = "L" if v.co.x > 0 else "R"
-        per.append({"shell": 1.0 - w, f"arm_{side}": w})
+        x, y, z = v.co
+        w_arm = arm_weight(x, z)
+        side = "L" if x > 0 else "R"
+        weights = {"shell": 1.0 - w_arm}
+        if w_arm > 1e-4:
+            weights[f"arm_{side}"] = w_arm
+        for bone, w in hem_weights(x, y, z).items():
+            weights[bone] = weights.get(bone, 0.0) + w
+            weights["shell"] = weights.get("shell", 0.0) - w
+        per.append(_normalized(weights))
     add_vertex_groups(shell, per)
     bind(shell, arm_obj, None)
     for obj in extras:
@@ -1224,40 +1291,123 @@ def pose_rotate_pair(pb, axis_a, deg_a, axis_b, deg_b):
     pb.rotation_quaternion = qa @ qb
 
 
+# ---- v4 soft shell timing (spec 18.5) -----------------------------------
+HEM_TRAIL = 3.0            # degrees the hem trails behind the body
+HEM_LAG = 2                # frames the hem lags the shell lift
+HEM_FLARE_DEG = 28.0           # peak outward flare of a hem panel, degrees
+HEM_ANCHOR = 0.18          # hem height used to keep the skirt on the floor
+SQUASH_EXTRA_FRAMES = (3, 9, 15, 21)   # squash / stretch peaks
+
+# (frame, shell lift, pitch, roll, left(thigh, shin, foot), right, arm swing)
+RUN_KEY_TABLE = [
+    (1,  0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
+    (4,  0.228, -10.0,  1.8, (-12, 34, 0),  (18, 64, -6),   11.0),
+    (7,  0.272, -10.0,  1.2, (8, 58, -5),   (-10, 58, -3),   0.0),
+    (10, 0.312, -10.0,  0.0, (26, 52, -12), (-28, 48, 5),  -11.0),
+    (13, 0.240, -10.0,  0.0, (26, 58, -10), (-28, 10, 4),  -18.0),
+    (16, 0.228, -10.0, -1.8, (18, 64, -6),  (-12, 34, 0),  -11.0),
+    (19, 0.272, -10.0, -1.2, (-10, 58, -3), (8, 58, -5),    0.0),
+    (22, 0.312, -10.0,  0.0, (-28, 48, 5),  (26, 52, -12),  11.0),
+    (25, 0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
+]
+
+
+def run_lift(f):
+    """Looping linear sample of the run lift curve (1..24, 25 wraps to 1)."""
+    f = ((f - 1) % 24) + 1
+    prev = RUN_KEY_TABLE[0]
+    for cur in RUN_KEY_TABLE[1:]:
+        if prev[0] <= f <= cur[0]:
+            span = cur[0] - prev[0]
+            t = (f - prev[0]) / span if span else 0.0
+            return prev[1] + (cur[1] - prev[1]) * t
+        prev = cur
+    return RUN_KEY_TABLE[0][1]
+
+
+def _wrap24(f):
+    return ((f - 1) % 24) + 1
+
+
+def _pulse(f, center, sigma):
+    d = abs(_wrap24(f) - center)
+    d = min(d, 24 - d)
+    return math.exp(-(d / sigma) ** 2)
+
+
+def run_squash(f):
+    """(squash, stretch) in 0..1: squash peaks just after each contact."""
+    sq = _pulse(f, 3, 3.0) + _pulse(f, 15, 3.0)
+    st = _pulse(f, 9, 2.6) + _pulse(f, 21, 2.6)
+    return min(1.0, sq), min(1.0, st)
+
+
+def soft_shell_channels(squash, stretch):
+    """Non-uniform shell scale + the z shift that keeps the hem on the floor.
+
+    Scaling about the hip would lift the hem; the compensation moves the shell
+    down by exactly that amount, so the suit compresses towards the ground.
+    """
+    wide = 1.0 + 0.05 * squash - 0.02 * stretch
+    high = 1.0 - 0.07 * squash + 0.035 * stretch
+    comp = (high - 1.0) * (HIP_Z - HEM_ANCHOR)
+    return wide, high, comp
+
+
 def build_actions(arm_obj):
     actions = []
     pb = arm_obj.pose.bones
 
     # ---- idle: 60 frames, shell settles + tiny breathing ----
+    # every channel the run action drives is keyed here too, so switching
+    # clips cannot leave the suit mid-squash or a hem bone still flared
     begin_action(arm_obj)
     for f, lift in ((1, 0.0), (30, 0.006), (60, 0.0)):
         reset_pose(arm_obj)
         pose_translate(pb["shell"], (0, 0, lift))
+        for bone in arm_obj.pose.bones:
+            bone.keyframe_insert("rotation_quaternion", frame=f)
         pb["shell"].keyframe_insert("location", frame=f)
-        for name in ("thigh_L", "thigh_R", "shin_L", "shin_R", "foot_L", "foot_R"):
-            pb[name].keyframe_insert("rotation_quaternion", frame=f)
+        pb["shell"].keyframe_insert("scale", frame=f)
     actions.append(finish_action(arm_obj, "idle"))
 
-    # ---- run: 24 frame loop (0.8 s), shell bouncing, legs alternating ----
-    # (frame, lift, tilt, roll, left(thigh, shin, foot), right, arm swing)
-    keys = [
-        (1,  0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
-        (4,  0.228, -10.0,  1.8, (-12, 34, 0),  (18, 64, -6),   11.0),
-        (7,  0.272, -10.0,  1.2, (8, 58, -5),   (-10, 58, -3),   0.0),
-        (10, 0.312, -10.0,  0.0, (26, 52, -12), (-28, 48, 5),  -11.0),
-        (13, 0.240, -10.0,  0.0, (26, 58, -10), (-28, 10, 4),  -18.0),
-        (16, 0.228, -10.0, -1.8, (18, 64, -6),  (-12, 34, 0),  -11.0),
-        (19, 0.272, -10.0, -1.2, (-10, 58, -3), (8, 58, -5),    0.0),
-        (22, 0.312, -10.0,  0.0, (-28, 48, 5),  (26, 52, -12),  11.0),
-        (25, 0.240, -10.0,  0.0, (-28, 10, 4),  (26, 58, -10),  18.0),
-    ]
+    # ---- run: 24 frame loop (0.8 s), soft shell (spec 18.5) ----
     begin_action(arm_obj)
-    for f, lift, tilt, roll, left, right, arm_swing in keys:
+    for f, lift, tilt, roll, left, right, arm_swing in RUN_KEY_TABLE:
         reset_pose(arm_obj)
-        pose_translate(pb["shell"], (0, 0, lift))
+        squash, stretch = run_squash(f)
+        wide, high, comp = soft_shell_channels(squash, stretch)
+        pb["shell"].scale = (wide, high, wide)
+        pose_translate(pb["shell"], (0, 0, lift + comp))
         pose_rotate_pair(pb["shell"], (1, 0, 0), tilt, (0, 1, 0), roll)
         pb["shell"].keyframe_insert("location", frame=f)
         pb["shell"].keyframe_insert("rotation_quaternion", frame=f)
+        pb["shell"].keyframe_insert("scale", frame=f)
+
+        # hem: stand up against the body tilt, trail 3 degrees behind
+        pose_rotate_pair(pb["hem_root"], (1, 0, 0), -tilt + HEM_TRAIL,
+                         (0, 1, 0), -roll)
+        pb["hem_root"].keyframe_insert("rotation_quaternion", frame=f)
+
+        s = max(0.0, min(1.0, (run_lift(f - HEM_LAG) - 0.228) / 0.084))
+        phase = 2.0 * math.pi * (f - 1) / 24.0
+        for i in range(HEM_BONES):
+            ang = math.radians(i * 45.0)
+            axis = Vector((-math.sin(ang),
+                           math.cos(ang) * DEPTH_RATIO, 0.0)).normalized()
+            # the back of the skirt is dragged harder than the front (+Y = back)
+            bias = 0.60 + 0.40 * (0.5 + 0.5 * math.sin(ang))
+            a_deg = (-6.0 + HEM_FLARE_DEG * s) * bias + 5.0 * math.sin(
+                phase + i * math.pi / 4.0)
+            b_deg = (-2.0 + 0.5 * HEM_FLARE_DEG * s) * bias + 3.0 * math.sin(
+                phase + i * math.pi / 4.0 + math.pi / 2.0)
+            # rotating about the tangent swings a downward bone inward, so the
+            # outward flare is the negative angle
+            pose_rotate(pb[f"hem_{i:02d}_a"], axis, -a_deg)
+            pose_rotate(pb[f"hem_{i:02d}_b"], axis, -b_deg)
+            pb[f"hem_{i:02d}_a"].keyframe_insert("rotation_quaternion", frame=f)
+            pb[f"hem_{i:02d}_b"].keyframe_insert("rotation_quaternion", frame=f)
+
         for name, (thigh, shin, foot) in (("L", left), ("R", right)):
             pose_rotate(pb[f"thigh_{name}"], (1, 0, 0), thigh)
             pb[f"thigh_{name}"].keyframe_insert("rotation_quaternion", frame=f)
@@ -1269,6 +1419,16 @@ def build_actions(arm_obj):
         pose_rotate(pb["arm_R"], (1, 0, 0), -arm_swing)
         pb["arm_L"].keyframe_insert("rotation_quaternion", frame=f)
         pb["arm_R"].keyframe_insert("rotation_quaternion", frame=f)
+
+    # extra keys so squash / stretch reach their peaks between the pose keys
+    for f in SQUASH_EXTRA_FRAMES:
+        squash, stretch = run_squash(f)
+        wide, high, comp = soft_shell_channels(squash, stretch)
+        pb["shell"].scale = (wide, high, wide)
+        pose_translate(pb["shell"], (0, 0, run_lift(f) + comp))
+        pb["shell"].keyframe_insert("location", frame=f)
+        pb["shell"].keyframe_insert("scale", frame=f)
+
     actions.append(finish_action(arm_obj, "run"))
 
     ad = arm_obj.animation_data

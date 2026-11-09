@@ -2,9 +2,9 @@
 
 以《银魂》伊丽莎白为核心的 3D 角色项目。
 
-> **当前阶段：v3 拖地下摆 + 扁平鸭蹼**（17 网格 / 30,994 tris / 13 骨骼 / idle + run / 正面对比剪影 IoU 0.914）。
+> **当前阶段：v4 软壳（布料动态）**（17 网格 / 31,074 tris / 30 骨骼 / idle + run / 正面对比剪影 IoU 0.914）。
 > 平台：Windows 11 x64，仓库 `D:\work\eliz_game`；Blender 4.5.15 LTS 便携版在 `D:\tools\blender-4.5.15-windows-x64\`。
-> 产物：`art\blender\eliz_costume_v2.blend`、`art\exports\eliz_costume_v2.glb`（2.67 MB，内嵌绒面贴图）、`art\renders\v2_*.png`（11 张，含 4 张近景与参考匹配图）。
+> 产物：`art\blender\eliz_costume_v2.blend`、`art\exports\eliz_costume_v2.glb`（2.72 MB，内嵌绒面贴图）、`art\renders\v2_*.png`（11 张）、`art\renders\v4_run*.gif/mp4`（3/4、侧面、v3 对比）。
 
 ## 项目概念
 
