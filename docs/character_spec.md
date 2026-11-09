@@ -931,3 +931,8 @@ $B = "D:\tools\blender-4.5.15-windows-x64\blender.exe"
 & $B --background --factory-startup --python-exit-code 1 --python "scripts\check_asset.py"
 & $B --background --factory-startup --python-exit-code 1 --python "scripts\render_views.py"
 ```
+
+### 17.7 后续版本
+
+v1 人工 review 后提出 5 条修改意见（玩偶外套感、手臂一体、服/人比例与坠感、嘴缝弧线、布料质感），
+改造方案另见 **[character_spec_v2.md](character_spec_v2.md)**（草案，待确认）。v1 的脚本与产物保留，作为对照基线。
