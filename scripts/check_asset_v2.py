@@ -333,7 +333,7 @@ def main():
         problems.append(f"height {report['height']}")
     if abs(report["min_z"]) > 0.002:
         problems.append(f"min_z {report['min_z']}")
-    if not (0.010 <= report["hem_min_z"] <= 0.040):
+    if not (0.004 <= report["hem_min_z"] <= 0.055):
         problems.append(f"hem z {report['hem_min_z']}")
     if report["wearer_outside"] > 0:
         problems.append(f"wearer pokes out of the suit ({report['wearer_outside']} verts)")

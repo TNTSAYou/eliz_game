@@ -322,11 +322,12 @@ def _smoothstep(x):
 
 
 def body_r(z):
-    """Outer half width at z: soft egg shoulder, small hem flare, rolled hem bulge."""
+    """Outer half width at z: soft egg shoulder, hem flare, pooling bulge at the floor."""
     if z > DOME_Z0:
         u = min(1.0, (z - DOME_Z0) / DOME_H)
         return BODY_R * max(0.0, 1.0 - u ** 3) ** DOME_P
     flare = 1.0 + (HEM_FLARE - 1.0) * (1.0 - _smoothstep((z - HEM_Z) / 0.18))
+    flare += 0.040 * (1.0 - _smoothstep((z - HEM_Z) / 0.18))     # fabric spreads on the floor
     roll = 0.016 * math.exp(-((z - (HEM_Z + 0.026)) / 0.026) ** 2)   # folded hem
     return BODY_R * flare + roll
 
@@ -457,7 +458,7 @@ def _cavity_solid():
 
 
 def apply_folds(obj):
-    """Deterministic soft folds: hanging wrinkles + low-freq lumps + wavy hem."""
+    """Deterministic soft folds: hanging wrinkles, hem pooling, wavy hem."""
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     bm.normal_update()
@@ -465,17 +466,27 @@ def apply_folds(obj):
         p = v.co.copy()
         ang = math.atan2(p.y / DEPTH_RATIO, p.x)
         fall = 1.0 - _smoothstep((p.z - 0.30) / 0.90)
+        # hanging folds, stronger near the floor (fabric pooling)
+        pool = 1.0 - _smoothstep((p.z - 0.02) / 0.34)
         fold = 0.0050 * math.sin(ang * 9.0 + 0.6) * fall
         fold += 0.0025 * math.sin(ang * 14.0 + 2.1) * fall
+        fold += 0.0100 * math.sin(ang * 13.0 + 0.9) * pool ** 1.5
+        fold += 0.0180 * math.sin(ang * 7.0 + 2.2) * pool ** 2
         lump = 0.0028 * noise.noise(p * 3.2) + 0.0012 * noise.noise(p * 7.5)
-        guard = _smoothstep((p.z - (HEM_Z + 0.015)) / 0.06)
-        v.co = p + v.normal * (fold + lump) * guard
+        guard = _smoothstep((p.z - (HEM_Z + 0.012)) / 0.04)
+        radial = Vector((p.x, p.y / DEPTH_RATIO, 0.0))
+        if radial.length > 1e-6 and v.normal.dot(radial) > 0.0:
+            # only the outer wall gets the folds, so the lining never pokes through
+            v.co = p + v.normal * (fold + lump) * guard
         # fabric sags forward between the feet (fills the gap with white)
         if p.y < 0.0 and abs(p.x) < 0.18 and p.z < 0.36:
             w = math.exp(-(p.x / 0.10) ** 2) * (1.0 - _smoothstep((p.z - 0.04) / 0.26))
             v.co.y -= 0.055 * w
-        if p.z < HEM_Z + 0.02:            # barely wavy hem edge
-            v.co.z += 0.0030 * math.sin(ang * 9.0 + 1.0) * (1.0 - (p.z - HEM_Z) / 0.02)
+        if p.z < HEM_Z + 0.03:            # pool edge: fabric bunches on the floor
+            t = 1.0 - (p.z - HEM_Z) / 0.03
+            v.co.z += (0.0180 * math.sin(ang * 7.0 + 2.2) + 0.0070 * math.sin(ang * 13.0 + 0.9)) * t
+            v.co.z = max(v.co.z, 0.010)
+        fold = fold * (1.0 + 0.6 * (1.0 - _smoothstep((p.z - 0.02) / 0.12)))
     bm.to_mesh(obj.data)
     bm.free()
     for poly in obj.data.polygons:
@@ -776,13 +787,27 @@ def build_eyes(colls):
     return objs
 
 
-def _toe_bump(theta):
-    s = 0.0
-    for ang in (-0.85, 0.0, 0.85):          # three webbed lobes, forward
-        d = (theta - ang + math.pi) % (2 * math.pi) - math.pi
-        s += math.exp(-(d / 0.18) ** 2)
-    s -= 1.30 * math.exp(-((abs(theta) - 0.42) / 0.08) ** 2)   # notches between toes
-    return s
+TOES = (-0.90, 0.0, 0.90)
+TOE_W = 0.40
+
+
+def _toe_shape(theta):
+    """1 at each toe tip, 0 at the web notches; sharp V between toes."""
+    best = 0.0
+    for ang in TOES:
+        d = abs((theta - ang + math.pi) % (2.0 * math.pi) - math.pi)
+        if d < TOE_W:
+            best = max(best, (1.0 - d / TOE_W) ** 0.62)
+    return best
+
+
+def _toe_peak(theta):
+    """Pointed toe crown: 1 at the tip, falling fast to the web."""
+    best = 0.0
+    for ang in TOES:
+        d = abs((theta - ang + math.pi) % (2.0 * math.pi) - math.pi)
+        best = max(best, math.exp(-(d / 0.26) ** 1.25))
+    return best
 
 
 def _shoe_outline(theta):
@@ -792,13 +817,13 @@ def _shoe_outline(theta):
         base = SHOE_HALF_W + (SHOE_LEN_F - SHOE_HALF_W) * c ** 0.9
     else:
         base = SHOE_HALF_W + (SHOE_LEN_B - SHOE_HALF_W) * (-c) ** 0.9
-    return base + 0.060 * _toe_bump(theta)
+    return base - 0.020 + 0.130 * _toe_shape(theta)
 
 
 def _shoe_height(u, theta=0.0):
-    """Puffy top with a rolled rim; the toe lobes stand a little taller."""
+    """Puffy instep, thin webbing, three toe ridges."""
     h = SHOE_SOLE + (SHOE_TOP - SHOE_SOLE) * max(0.0, 1.0 - u ** 3) ** 0.42
-    h += 0.035 * max(0.0, _toe_bump(theta)) * u ** 3
+    h += 0.070 * _toe_shape(theta) ** 0.8 * u ** 2
     return h
 
 
