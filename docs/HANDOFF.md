@@ -1,21 +1,23 @@
-# 伊丽莎白项目 · 会话交接文档
+# 伊丽莎白项目 · 会话交接文档（Windows 版）
 
 > 最后更新：2026-11-09（Asia/Shanghai）
-> 项目目录：`/Users/wzh/work/eliz_game`
-> 当前阶段：**规格书 v0.1 已建立，尚未开始建模**
-> 阻塞点：**等待用户确认规格书关键决策；Blender 尚未安装**
+> 项目目录：`D:\work\eliz_game`（原 macOS 路径 `/Users/wzh/work/eliz_game` 已废弃）
+> 平台：**Windows 11 IoT 企业版 LTSC 10.0.26100（24H2），x64**
+> 当前阶段：**v1 blockout 已生成（Blender 4.5.15 已装，脚本可重跑，GLB 已校验）**
+> 阻塞点：**规格书第 12 节关键决策仍待确认（v1 先用了推荐默认值）；比例与细节待用户验收**
 
 ---
 
 ## 0. 快速状态
 
-- 目标：用 **Tripo + Blender** 制作《银魂》伊丽莎白的 3D 角色，采用 **“玩偶服版”** 设定。
+- 目标：用 **Blender（Tripo 仅作可选辅助）** 制作《银魂》伊丽莎白的 3D 角色，采用 **“玩偶服版”** 设定。
 - 核心画面：平时是白色长蛋形玩偶服，只露出黄色鸭蹼鞋；**奔跑时外壳上弹，露出里面的毛腿大叔腿**。
 - 已确定：外壳、底口、内衬、鸭蹼鞋、毛腿、绑定方案、尺寸和验收标准。
 - 已决定：**外壳直接在 Blender 里建，不推荐用 Tripo 生成最终外壳**；Tripo 只作为比例参考或内里大叔头部的可选辅助。
-- 当前进度：**没有生成任何模型，没有 `.blend`，没有 `.glb`，没有安装 Blender，也没有使用 Tripo 账号。**
-- 下一步：安装 Blender 4.5 LTS → 做 blockout → 渲染四视图 → 用户确认比例。
-- 最后待确认：用户是否授权安装 Blender，以及是否同意第一版只做“外壳 + 底口 + 内衬 + 嘴眼 + 鸭蹼 + 毛腿 + 简单骨骼”。
+- 环境现状：Windows 11 x64；仓库 `D:\work\eliz_game`；Git 2.56（远程已配置，`main` 与 `origin/main` 同步）；**Blender 4.5.15 LTS 已装在 `D:\tools\blender-4.5.15-windows-x64\`**；`scripts\` 下 3 个脚本可用。
+- 当前进度：**v1 blockout 已生成**：23 个网格对象、8,364 tris、13 根骨骼、`idle`/`run` 两个动作；`.blend` + `.glb` + 6 张渲染已产出并通过重导入校验。未使用 Tripo。
+- 下一步：用户看 6 张渲染确认比例 → 按反馈调壳形/腿长/壳抬高度 → 再细化鞋、牌子握持、材质与描边。
+- 最后待确认：规格书第 12 节决策 1–5（v1 已按推荐默认值落地：A+B 风格、0.32m 跑抬、中等毛量、空白牌、深色短裤）。
 
 ---
 
@@ -37,46 +39,66 @@
 
 因此，后文所有设计都围绕“玩偶服 + 跑动露腿”展开，不再讨论“实心鸭子/生物版”。
 
+项目最初在 **macOS** 上启动，文档全部按 macOS 写（`/Users/wzh/...`、Homebrew、`/Applications/Blender.app`）。工作机已切换到 **Windows 11**，因此本文件与 `docs/character_spec.md` 已整体改写为 Windows 版本：路径、安装方式、命令、验证步骤全部按本机实测重写，设计内容不变。
+
 ---
 
 ## 2. 环境与资产现状
 
-### 2.1 环境
+### 2.1 环境（实测）
 
-- 系统：macOS 15.3.1，Apple Silicon（arm64）。
-- 磁盘：约 110GB 可用。
-- Homebrew：已安装，路径 `/opt/homebrew/bin/brew`。
-- Blender：**未安装**（`/Applications` 和 PATH 中都没有）。
-- Unity / Godot / Unreal：**未安装**。
-- Tripo：用户尚未在本次会话中登录或提供 API key；助手无法直接操作其账号。
+| 项 | 值 | 备注 |
+|---|---|---|
+| 操作系统 | Windows 11 IoT 企业版 LTSC，10.0.26100（24H2），x64 | 不是 macOS；所有 macOS 命令作废 |
+| CPU | Intel Core i5-13500H，12 核 16 线程 | 后台渲染可吃满 |
+| 内存 | 16 GB（可用约 15.7 GB） | 够跑 8k–12k tris 的 blockout |
+| GPU | Intel Iris Xe Graphics（集显，共享显存约 2GB，驱动 32.0.101.6733） | 支持 OpenGL 4.6，可用 EEVEE Next；不要开高细分/4K 贴图 |
+| 磁盘 | C: 剩余约 85 GB；D: 剩余约 287 GB | 仓库在 D:，Blender 便携版也放 D: |
+| Shell | Windows PowerShell 5.1 | 命令按 PS 5.1 语法写，不用 bash 语法 |
+| Git | 2.56.0.windows.4，`C:\Program Files\Git\cmd\git.exe` | **不在 PATH**，需全路径调用 |
+| Git 身份 | **未配置**（system/local/global 都没有 `user.name`/`user.email`） | 提交前必须先设置 |
+| Python（系统） | 3.14.7，`C:\Python314\python.exe` | 只用于辅助脚本；**不能 `import bpy`** |
+| Python（Blender 内置） | 3.11（随 Blender 4.5） | 建模脚本在 Blender 内运行 |
+| Chocolatey | 2.7.4 | 其 `blender` 包当前是 5.2.3，**不满足 4.5 LTS 基线**，不作为首选渠道 |
+| Blender | **已安装** `D:\tools\blender-4.5.15-windows-x64\blender.exe` | 4.5.15 LTS（build 2026-10-22），SHA256 已校验，`--version` 通过 |
+| Unity / Godot / Unreal | **未安装** | 当前阶段不需要 |
+| Tripo | 尚未登录，无 API key | 助手无法直接操作其账号 |
 
 ### 2.2 本地参考图
 
-参考图目录：`/Users/wzh/Downloads/eliz_pic`
+参考图已入库，唯一权威副本是仓库内的 `art/refs/`（原 macOS 路径 `/Users/wzh/Downloads/eliz_pic` 在当前机器上不存在）：
 
 | 文件 | 内容 | 用途 |
 |---|---|---|
-| [images (1).jpeg](</Users/wzh/Downloads/eliz_pic/images (1).jpeg>) | 200×295，黑底，正面全身 | **主比例参考**；适合做正视图 |
-| [images.jpeg](</Users/wzh/Downloads/eliz_pic/images.jpeg>) | 491×407，动画截图，暖金背景 | 看鸭蹼、脚趾、暖光下的白壳颜色 |
-| [images.png](</Users/wzh/Downloads/eliz_pic/images.png>) | 425×470，3/4 撑红伞行走 | 看抓握、重心、动态；棋盘格是烘进画面的，无 alpha |
-| [4a0c3ec6-d9fd-4a5e-87a3-d5beda1492e0.webp](</Users/wzh/Downloads/eliz_pic/4a0c3ec6-d9fd-4a5e-87a3-d5beda1492e0.webp>) | 1000×749，举空白牌子半身 | 看牌子和手臂；白底，不适合直接做透明素材 |
+| [`eliz_front.jpg`](../art/refs/eliz_front.jpg) | 200×295，黑底，正面全身 | **主比例参考**；适合做正视图 |
+| [`eliz_anime.jpg`](../art/refs/eliz_anime.jpg) | 491×407，动画截图，暖金背景 | 看鸭蹼、脚趾、暖光下的白壳颜色 |
+| [`eliz_umbrella.png`](../art/refs/eliz_umbrella.png) | 425×470，3/4 撑红伞行走 | 看抓握、重心、动态；棋盘格是烘进画面的，无 alpha |
+| [`eliz_sign.webp`](../art/refs/eliz_sign.webp) | 1000×749，举空白牌子半身 | 看牌子和手臂；白底，不适合直接做透明素材 |
 
 ### 2.3 工作区
 
-当前工作区：
-
 ```text
-eliz_game/
-  docs/
-    HANDOFF.md
-    character_spec.md   ← 角色规格书 v0.1
-  art/
-    refs/               ← 4 张参考图已复制
-    blender/
-    exports/
-    renders/
-  scripts/
+D:\work\eliz_game\
+  .git\                 ← 已初始化，main 与 origin/main 同步
+  .gitignore
+  README.md
+  docs\
+    HANDOFF.md          ← 本文件（Windows 版）
+    character_spec.md   ← 角色规格书 v0.1（Windows 版）
+  art\
+    refs\               ← 4 张参考图（已入库）
+    blender\            ← eliz_costume_v1.blend（已生成）
+    exports\            ← eliz_costume_v1.glb（已生成，287 KB）
+    renders\            ← v1_front/side/back/three_quarter/run_reveal/sign_pose.png（已生成）
+  scripts\              ← build_eliz_v1.py / render_views.py / verify_export.py / check_asset.py（已生成）
 ```
+
+Git 现状（实测）：
+
+- 远程：`git@github.com:TNTSAYou/eliz_game.git`（origin）。
+- 分支：`main`，与 `origin/main` 同步。
+- 提交：`d2fc2f2`（初始化规格书/README/参考图）、`692f4a5`（记录仓库初始化状态）。
+- 未提交改动：v1 建模脚本、文档更新与 `art\` 产物尚未提交（本机未配置 Git 身份）。
 
 ---
 
@@ -125,7 +147,7 @@ eliz_game/
 - 脚：三趾、趾间有蹼、黄色、趾尖略尖；不是人脚。
 - 背面：参考图没有背面；第三人称游戏里背面是主视图，必须补设计。建议保持纯白，最多一个小尾巴凸起，不要加羽毛/拉链。
 - 道具：牌子是白色长方形 + 细杆；牌子是“第二张脸”，也是天然 UI 载体。
-- 颜色：身体约 `#E8E8E8` 暖灰白；嘴/蹼 `#FBC55B`；描线 `#2B2B2B`；眼白 `#FFFFFF`；红伞 `#A83D49`。
+- 颜色：身体约 `#E9E9E9` 暖灰白；嘴/蹼 `#FBC55B`；描线 `#2B2B2B`；眼白 `#FFFFFF`；红伞 `#A83D49`。
 
 ### 3.4 比例硬指标（按正面图估算）
 
@@ -142,31 +164,34 @@ eliz_game/
 ### 4.1 尺寸关系
 
 - 总高：**1.8m**。
-- 壳宽：约 **0.85m**。
-- 壳底口：待机时距地 **0.12–0.15m**，刚好盖到鞋面。
-- 跑步时壳抬到 **0.30–0.35m**（抬升 15–20cm），露出小腿；如果要露膝，可到 0.45m 左右。
-- 底口直径：**0.45–0.55m** 的宽椭圆，必须能让两条腿和跑步动作通过。
-- 壳厚：`Solidify` **2–3cm**。
-- 鸭蹼鞋：高约 **0.15m**，长约 **0.35m**，宽约 **0.23m**。
-- 腿关节：髋 **0.9m**、膝 **0.5m**、踝 **0.12m**。
+- 壳宽：约 **0.85m**，壳深约 **0.70m**。
+- 壳底口：待机时距地 **0.15m**，刚好盖到鞋面。
+- 跑步时壳抬到 **0.32m**（抬升约 17cm），露出小腿；如果要露膝，可到 **0.50m** 左右。
+- 底口：**0.50 × 0.38m** 的宽椭圆，必须能让两条腿和跑步动作通过。
+- 壳厚：`Solidify` **2cm**；内衬 **1cm**。
+- 鸭蹼鞋：高约 **0.15m**，长约 **0.36m**，宽约 **0.24m**。
+- 腿关节：髋 **0.90m**、膝 **0.50m**、踝 **0.12m**。
 
 ### 4.2 分件
 
-| 部件 | 说明 | 优先级 | 面数预算（最终） |
+| 部件 | 说明 | 优先级 | 面数预算（v1） |
 |---|---|---|---|
-| `Suit_Shell` | 白色长蛋形壳，开底口，有厚度 | P0 | 2k–4k |
-| `Suit_Liner` | 深色内衬，防止看穿 | P0 | 300–600 |
-| `Suit_Bill_Upper` | 上嘴，固定到头部 | P0 | 300–500 |
-| `Suit_Bill_Lower` | 下嘴，挂到 `jaw` | P0 | 300–500 |
-| `Suit_Eye_L/R` | 眼睛，可独立眨眼 | P0 | 100–200 each |
-| `Suit_Arm_L/R` | 白色鳍状袖套，一根骨 | P0 | 300–500 each |
-| `DuckShoe_L/R` | 黄色鸭蹼鞋，三趾有蹼 | P0 | 300–500 each |
-| `Human_Leg_L/R` | 毛腿，髋到踝 | P0 | 500–800 each |
-| `Human_Pelvis` | 隐藏腰胯，连接腿 | P1 | 200–400 |
-| `Hair_Cards` | 风格化毛簇，不要毛发模拟 | P1 | 50–100 per leg |
-| `Sign` | 空白板 + 细杆，文字以后交给引擎 | P1 | 20–50 |
-| `Umbrella` | 红色，低模，第一版可不做 | P2 | 300–500 |
-| `Inner_Head` | 大叔头/发光眼，第一版可不做 | P2 | 1k–2k |
+| `SUIT_Shell` | 白色长蛋形壳，开底口 | P0 | 2k–4k |
+| `SUIT_Liner` | 深色内衬，防止看穿 | P0 | 300–600 |
+| `SUIT_Bill_Upper` | 上嘴，固定到头部 | P0 | 300–500 |
+| `SUIT_Bill_Lower` | 下嘴，挂到 `jaw` | P0 | 300–500 |
+| `SUIT_Eye_L/R` | 眼白 + 瞳孔 | P0 | 150–250 each |
+| `SUIT_Lash_L/R` | 三根睫毛 | P0 | 20–40 each |
+| `SUIT_Arm_L/R` | 白色鳍状袖套 | P0 | 400–700 each |
+| `DUCKSHOE_L/R` | 黄色鸭蹼鞋，三趾有蹼 | P0 | 500–800 each |
+| `INNER_Leg_L/R` | 毛腿，髋到踝 | P0 | 800–1.2k each |
+| `INNER_Pelvis` | 隐藏腰胯/短裤 | P1 | 200–400 |
+| `INNER_Hair` | 风格化毛簇，不要毛发模拟 | P1 | 100–200 合计 |
+| `PROP_Sign` | 空白板 + 细杆 | P1 | 30–60 |
+| `PROP_Umbrella` | 红色低模伞 | P2 | 300–500 |
+| `INNER_Head` | 大叔头/发光眼 | P2 | 1k–2k |
+
+**v1 总预算：8k–12k tris。**
 
 ### 4.3 建模注意点
 
@@ -174,8 +199,8 @@ eliz_game/
 
 - 用 UV 球或圆柱做长蛋形，删掉底部，形成宽椭圆开口。
 - 不要用布尔挖洞；直接建开口的壳更干净。
-- 加 `Solidify` 2–3cm，再加一圈下摆卷边。
-- 内衬用深灰/近黑，低粗糙度无所谓；重点是“看进去是暗的”。
+- 加 `Solidify` 2cm，再加一圈下摆卷边。
+- 内衬用深灰/近黑；重点是“看进去是暗的”。
 - 待机时下摆接近鞋面；跑步时壳骨上抬，露出内衬和腿。
 - 背面保持干净，不要加羽毛、拉链、围巾、腰带。
 
@@ -189,7 +214,7 @@ eliz_game/
 
 - 只做髋到踝，不需要完整人体。
 - 腿型用圆柱/基础腿，膝盖和脚踝留环线。
-- 毛发用 6–10 簇风格化毛片/几何毛簇，不要做毛发模拟。
+- 毛发用 **12–16 簇**风格化毛片/几何毛簇，不要做毛发模拟。
 - 大腿和小腿外侧多一点，内侧少一点；颜色深，和白色外壳形成反差。
 - 待机时完全藏在壳里；跑步时至少露出 15cm。
 
@@ -209,46 +234,47 @@ eliz_game/
 
 ### 4.4 绑定方案
 
-推荐骨骼（约 15–20 根）：
+推荐骨骼（v1，**13–15 根**）：
 
 ```text
 root
   pelvis
-    thigh_L / thigh_R
-      shin_L / shin_R
-        foot_L / foot_R
-    shell              ← 壳的主骨
-      shell_lift       ← 控制壳上弹/倾斜
-    spine
-      head
-        jaw
-    arm_L / arm_R
-    sign_socket
-    umbrella_socket
+    thigh_L
+      shin_L
+        foot_L
+    thigh_R
+      shin_R
+        foot_R
+    shell              ← 壳的主骨（刚体）
+      jaw
+      arm_L
+      arm_R
+        sign_socket
+      umbrella_socket  ← v2，可选
 ```
 
 要点：
 
 - 壳 **100% 权重**给 `shell` 骨，不要给腿骨。
 - 腿平滑权重到腿骨；鞋 100% 给脚骨。
-- `shell_lift` 控制壳上下移动和前后倾斜；跑步时抬 15–20cm、后仰 5–10°。
+- 动画 `shell` 的局部 Z 位移和旋转，实现壳上弹/后仰。
 - 壳是刚体/半刚体，腿是独立动画；这样“壳弹起来露腿”非常容易调。
+- **v1 不做 `spine`/`head`**；壳当刚体。以后要点头再加 head 骨并拆壳。
 - 如果壳抬到最高时腿穿模，优先加宽底口，而不是把壳整体做大。
-- 不要用 Rigify/完整人形骨架；手写 15–20 根骨头更干净。
+- 不要用 Rigify/完整人形骨架；手写 13–15 根骨头更干净。
 - 牌子用 `Child Of` 或骨骼父子关系挂到 `sign_socket`，导出前烘焙。
 
 ### 4.5 动画清单
 
-| 动画 | 时长 | 要点 |
+| 动画 | 帧数 @30fps | 要点 |
 |---|---|---|
-| `idle` | 2s 循环 | 壳垂到底，腿完全看不见；轻微呼吸、眨眼、偶尔翻牌 |
-| `walk` | 1s 循环 | 壳轻微上下 3–5cm；腿偶尔露一点，不明显 |
-| `run` | 24 帧循环 / 30fps | 壳抬 15–20cm、后仰；腿完整循环；毛腿明显露出 |
-| `jump` | 0.8–1s | 壳上弹，腿收起；落地壳压扁、腿露一下再盖住 |
-| `hit` | 0.3s | 壳左右晃，毛腿弹出来一点再缩回 |
-| `sign_talk` | 1.5s | 举牌、翻牌 2–3 次；文字由引擎换 |
-| `attack_sign` | 0.5s | 举牌 → 拍下；牌子有 hitbox |
-| `reveal` | 2–3s（可选） | 壳抬很高或脸板掀开；内里发光眼出现；第一版不做 |
+| `idle` | 60 | 壳垂到底，腿完全看不见；轻微呼吸、眨眼、偶尔翻牌 |
+| `run` | 24 | 壳抬 17cm、后仰 8°；腿完整循环；毛腿明显露出 |
+| `walk` | 30 | 壳轻微上下 3cm；腿偶尔露一点，不明显 |
+| `jump` | 30 | 壳上弹，腿收起；落地壳压扁、腿露一下再盖住 |
+| `sign_talk` | 45 | 举牌、翻牌 2–3 次；文字由引擎换 |
+| `hit` | 15 | 壳左右晃，毛腿弹出来一点再缩回 |
+| `reveal` | 60（可选） | 壳抬到 0.50m 露膝；第一版不做脸 |
 
 动画原则：
 
@@ -305,13 +331,13 @@ root
 
 **不要**在提示词里写“里面有大叔”“毛腿”“玩偶服里的人”；Tripo 会把腿和壳生成在一起，后面很难拆。
 
-### 5.4 助手使用 Blender 的能力边界
+### 5.4 助手使用 Blender 的能力边界（Windows）
 
 助手可以：
 
 - 用 Blender 的 Python API（`bpy`）在**后台/无界面**模式下建模。
 - 生成网格、材质、UV、骨骼、权重、基础动画。
-- 渲染正面/侧面/背面/姿势预览 PNG，并读取图片检查。
+- 用 Workbench / EEVEE Next 渲染正面/侧面/背面/姿势预览 PNG，并读取图片检查。
 - 导出 GLB/FBX，生成 `.blend`。
 - 根据反馈改参数、重新生成，版本可复现。
 
@@ -321,8 +347,13 @@ root
 - 做很细的有机雕刻（大叔脸皱纹、真实毛发走向、布料褶皱）。
 - 登录用户的 Tripo 账号点网页；需要用户操作或提供 API key。
 - 在没有安装 Blender 的机器上直接生成 `.blend`。
+- 用系统 Python（3.14）跑 `bpy`——`bpy` 只在 Blender 自带的 Python 3.11 里存在。
 
-因此，不需要用户全程人工操作，但需要用户做审美确认；助手可以完成大部分重复建模、绑定、渲染和导出。
+Windows 特有的约束：
+
+- 必须用全路径调用 `blender.exe`（`& "D:\tools\...\blender.exe"`），否则依赖 PATH。
+- 命令用 PowerShell 语法；续行用反引号，不能用 bash 的 `\`。
+- 后台模式要带 `--background`；`--python-exit-code 1` 才能让失败被 PowerShell 捕获。
 
 ---
 
@@ -330,6 +361,7 @@ root
 
 ### 6.1 已完成
 
+- **2026-11-09：v1 blockout 完成**——安装 Blender 4.5.15 LTS 便携版、写 `scripts\build_eliz_v1.py`，生成壳/底口/内衬/嘴眼/鳍臂/鸭蹼/毛腿/腰胯/牌子 + 13 根骨骼 + `idle`/`run`，渲 6 张图，导出 `.blend` 与 `.glb`；`verify_export.py` 与 `check_asset.py` 均通过（高 1.800 m、13 骨、8,364 tris、2 个动作、待机 0 露腿、跑步露 0.184 m）。
 - 阅读并分析 4 张参考图。
 - 查证伊丽莎白原作设定与“中身”多层梗。
 - 确定采用“玩偶服版”，而不是“生物版”。
@@ -338,24 +370,25 @@ root
 - 比较 Tripo 与 Blender 直接建模，结论：外壳用 Blender，Tripo 只做可选辅助。
 - 说明助手可以用 `bpy` 脚本建模，但需要先安装 Blender。
 - 建立 `docs/character_spec.md`（v0.1），固化尺寸、分件、材质、绑定、动画、验收和待决策项。
-- 建立 `art/`、`scripts/` 目录，复制 4 张参考图到 `art/refs/`。
-- 初始化独立 Git 仓库 `main` 分支，提交规格书、README 和参考图（commit `d2fc2f2`）。
+- 建立 `art/`、`art/refs/`，复制 4 张参考图入库。
+- 初始化独立 Git 仓库 `main` 分支，配置 GitHub 远程并同步到 `origin/main`（`d2fc2f2`、`692f4a5`）。
+- **2026-11-09：文档从 macOS 版整体改写为 Windows 版**（环境、安装命令、路径、Git 状态按本机实测；绑定方案与规格书对齐为 13–15 根、去掉 `spine`/`head`；毛簇统一为 12–16；面数预算统一）。
 
 ### 6.2 未完成
 
-- 未安装 Blender。
-- 未配置 GitHub remote，未 push。
-- 未清理/放大参考图。
-- 未生成任何 `.blend` 或 `.glb`。
-- 未使用 Tripo，未生成草稿。
-- 未绑定、未动画、未渲染。
+- 未使用 Tripo（仍为可选）。
+- 未配置 Git 身份（`user.name`/`user.email`），本机提交会失败。
+- 未做 v1.5 细化：鸭蹼脚型、牌子握持、眼睑/眨眼、赛璐璐描边与布料质感。
+- 未做 walk / jump / hit / sign_talk 动画（只有 `idle` + `run`）。
 - 未选择游戏引擎，未开始游戏玩法。
 
 ### 6.3 最后的待确认
 
-用户要求先 brainstorm 规格，再动手。已创建 `docs/character_spec.md` v0.1，待用户确认第 12 节的关键决策（视觉方向、跑步壳抬升、毛腿密度、牌子、内里服装等）。
+v1 已按规格书的推荐默认值落地（A+B 风格、0.32m 跑抬、中等毛量、空白牌、深色短裤），现在需要用户看 6 张渲染确认：
 
-Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用户自行安装。
+1. 壳形/比例是否像（宽高比、头的圆度、裙摆收口）。
+2. 跑步露腿的高度够不够（当前 0.17m）。
+3. 鸭蹼鞋、牌子、毛簇这些简化件是否接受，还是先改。
 
 ---
 
@@ -363,15 +396,24 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 
 ### P0：确认规格 + 让 Blender 可用
 
-- [ ] 用户确认 `docs/character_spec.md` 第 12 节的关键决策（至少 1–5 项）。
-- [ ] 获得用户授权，安装 Blender 4.5 LTS（macOS arm64），或用户自行安装。
-- [ ] 验证：`blender --version`，或 `/Applications/Blender.app/Contents/MacOS/Blender --version`。
-- [ ] 检查目录：`art/refs/`、`art/blender/`、`art/exports/`、`art/renders/`、`scripts/`、`docs/`（已建）。
+- [x] 规格书第 12 节决策：v1 先按推荐默认值实现，验收时一并确认。
+- [x] Blender 安装方案：便携版 `D:\tools\blender-4.5.15-windows-x64\`。
+- [x] 下载并安装 Blender **4.5.15 LTS（windows-x64）**（SHA256 校验通过）：
+  - 便携版：<https://download.blender.org/release/Blender4.5/blender-4.5.15-windows-x64.zip> → 解压到 `D:\tools\blender-4.5.15-windows-x64\`。
+  - 安装版：<https://download.blender.org/release/Blender4.5/blender-4.5.15-windows-x64.msi>。
+  - 校验：同目录 `blender-4.5.15.sha256`。
+- [x] 验证：`Blender 4.5.15 LTS` 已正常输出版本（`--version`）。
+- [ ] 配置 Git 身份（仍未配置，提交前必做）：
+  ```powershell
+  & "C:\Program Files\Git\cmd\git.exe" config --global user.name "你的名字"
+  & "C:\Program Files\Git\cmd\git.exe" config --global user.email "you@example.com"
+  ```
+- [x] 创建 `scripts\`（3 个脚本已就位）；`art\blender\`、`art\exports\`、`art\renders\` 由脚本自动生成。
 
 ### P1：第一版 blockout
 
-- [ ] 可选：把正面图抠底、放大成 1024 PNG，保存到 `art/refs/eliz_front_clean.png`。
-- [ ] 写 `scripts/build_eliz_v1.py`：
+- [ ] 可选：把正面图抠底、放大成 1024 PNG，保存到 `art\refs\eliz_front_clean.png`。
+- [x] 写 `scripts\build_eliz_v1.py`（壳厚用双层建模替代 Solidify，底口尺寸更可控）：
   - 1.8m 长蛋形壳；
   - 底口 0.50 × 0.38m；
   - `Solidify` 2cm；
@@ -381,12 +423,17 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
   - 鳍状手臂；
   - 独立鸭蹼鞋；
   - 毛腿 + 隐藏腰胯；
-  - 简单骨骼：`root/pelvis/thigh/shin/foot/shell/jaw/arm/sign_socket`。
-- [ ] 渲染四视图：front / side / back / 3/4。
-- [ ] 渲染一个“壳抬起、腿露出”的跑步姿势。
-- [ ] 保存 `art/blender/eliz_costume_v1.blend`。
-- [ ] 导出 `art/exports/eliz_costume_v1.glb`。
-- [ ] 把渲染图给用户确认比例。
+  - 简单骨骼：`root/pelvis/thigh/shin/foot/shell/jaw/arm/sign_socket`（13–15 根）。
+- [x] 用 PowerShell 跑（已跑通）：
+  ```powershell
+  & "D:\tools\blender-4.5.15-windows-x64\blender.exe" --background --factory-startup `
+      --python-exit-code 1 --python "D:\work\eliz_game\scripts\build_eliz_v1.py"
+  ```
+- [x] 渲染四视图：front / side / back / 3/4（PNG 到 `art\renders\`）。
+- [x] 渲染一个“壳抬起、腿露出”的跑步姿势（v1_run_reveal.png），另加 v1_sign_pose.png。
+- [x] 保存 `art\blender\eliz_costume_v1.blend`。
+- [x] 导出 `art\exports\eliz_costume_v1.glb`（重导入校验通过）。
+- [ ] 把渲染图给用户确认比例 ← **当前卡在这一步**。
 
 ### P2：确认后再做
 
@@ -404,8 +451,8 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 
 | 决策 | 当前建议 | 状态 |
 |---|---|---|
-| 规格书关键决策 | 见 `docs/character_spec.md` 第 12 节；推荐 A+B 风格、0.32m 跑抬、中等毛量、v1 空白牌、深色短裤 | 待用户确认 |
-| 安装 Blender | 4.5 LTS，装 `/Applications` 或用户自行安装 | 待用户确认 |
+| 规格书关键决策 | 见 `docs/character_spec.md` 第 12 节；v1 已按推荐值实现，待验收 | 待用户确认 |
+| 安装 Blender | 4.5.15 LTS 便携版已装到 `D:\tools\blender-4.5.15-windows-x64\` | 已完成 |
 | 第一版范围 | 只做外壳/底口/内衬/嘴眼/鸭蹼/毛腿/简单骨骼 | 待用户确认 |
 | 大叔脸 | 第一版不做；以后用 Tripo 或手工做 hood 掀开 | 暂缓 |
 | 伞 | 第一版不做 | 暂缓 |
@@ -417,6 +464,8 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 
 ## 9. 风险与注意事项
 
+**设计风险**
+
 - **不要混用生物版和玩偶服版逻辑。** 鸭蹼是鞋，毛腿是内里；否则设定会打架。
 - **不要把壳和腿一起蒙皮。** 壳必须是独立骨骼，腿才能自由跑。
 - **不要把鸭蹼焊在壳上。** 鞋必须跟脚，否则跑步像滑行。
@@ -427,7 +476,23 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 - **不要用 Tripo 纹理做最终材质。** 它带烘焙光照，和赛璐璐冲突。
 - **不要用 Tripo 自动绑定。** 非标准体型，权重大概率崩。
 - **不要忽略背面。** 第三人称游戏里背面是主视图；参考图没有背面，需要补设计。
-- **IP 注意。** 伊丽莎白是空知英秋/集英社的角色；个人同人和学习可以，商业化发行需要授权。Tripo 生成物的商用权也要看套餐。
+
+**Windows 环境风险**
+
+- `git` 和 `blender` 都**不在 PATH**：脚本、文档一律写全路径，或先手动加 PATH。
+- Git **没有配置身份**：直接 `git commit` 会失败或产生错误作者信息。
+- PowerShell 里路径含空格必须加引号；调用 exe 用 `&`，否则拿不到 `$LASTEXITCODE`。
+- PowerShell 续行是反引号，且**反引号后不能有空格**，否则参数会被拆开。
+- 控制台中文可能乱码；脚本日志优先英文，或先 `chcp 65001`。
+- 系统 Python 是 3.14，**不能**替代 Blender 内置 Python 3.11 跑 `bpy`。
+- Intel Iris Xe 是集显、共享显存：不要开高细分/4K 贴图/体积雾，否则渲染会爆显存或极慢。
+- 首次运行 `blender.exe` 可能被 SmartScreen/杀软拦；必要时给 `D:\tools\blender-4.5.15-windows-x64\` 加白名单。
+- 仓库和 Blender 都放在纯 ASCII 路径（不要放中文目录、不要放 OneDrive 同步目录）。
+- 需要干净复现时用 `--factory-startup`；用户配置在 `%APPDATA%\Blender Foundation\Blender\4.5\`。
+
+**IP 风险**
+
+- 伊丽莎白是空知英秋/集英社的角色；个人同人和学习可以，商业化发行需要授权。Tripo 生成物的商用权也要看套餐。
 
 ---
 
@@ -435,10 +500,12 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 
 ### 本地图片
 
-- [正面全身图](</Users/wzh/Downloads/eliz_pic/images (1).jpeg>)
-- [动画截图](</Users/wzh/Downloads/eliz_pic/images.jpeg>)
-- [撑伞行走图](</Users/wzh/Downloads/eliz_pic/images.png>)
-- [举牌半身图](</Users/wzh/Downloads/eliz_pic/4a0c3ec6-d9fd-4a5e-87a3-d5beda1492e0.webp>)
+- [正面全身图](../art/refs/eliz_front.jpg)
+- [动画截图](../art/refs/eliz_anime.jpg)
+- [撑伞行走图](../art/refs/eliz_umbrella.png)
+- [举牌半身图](../art/refs/eliz_sign.webp)
+
+> 原始下载目录是原 macOS 机器上的 `/Users/wzh/Downloads/eliz_pic`，当前 Windows 机器没有该路径；仓库内 `art/refs/` 为唯一权威副本。
 
 ### 网络资料
 
@@ -446,6 +513,8 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 - [アニ図鑑：エリザベス](https://anizukan.com/characters/12237/elizabeth)
 - [RENOTE：エリザベス考察](https://renote.net/articles/10712/page/2)
 - [English Wikipedia: List of Gintama characters](https://en.wikipedia.org/wiki/List_of_Gintama_characters)
+- [Blender 4.5 LTS 下载目录](https://download.blender.org/release/Blender4.5/)
+- [Blender 4.5 手册](https://docs.blender.org/manual/en/4.5/)
 - [Tripo 图像转 3D](https://www.tripo3d.com/features/image-to-3d-model)
 - [Tripo 智能网格](https://www.tripo3d.com/features/smart-mesh)
 - [Tripo 新手教程](https://www.tripo3d.com/blog/first-3d-model-ai-tutorial)
@@ -457,16 +526,17 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 把下面这段直接贴给新会话：
 
 ```text
-请先阅读 /Users/wzh/work/eliz_game/docs/HANDOFF.md，理解项目背景、角色设定、已确定的设计方案和当前进度。
+请先阅读 D:\work\eliz_game\docs\HANDOFF.md，理解项目背景、角色设定、已确定的设计方案和当前进度。
 
-当前目标：用 Blender 脚本建模“玩偶服版”伊丽莎白。
+当前目标：用 Blender 脚本建模“玩偶服版”伊丽莎白（Windows 11 x64，仓库 D:\work\eliz_game）。
 核心结构：白色长蛋形外壳 + 底口 + 深色内衬 + 独立鸭蹼鞋 + 壳内毛腿；跑步时外壳上弹，露出毛腿。
 已决定：外壳用 Blender 直接建，不用 Tripo 生成最终外壳；Tripo 仅作为比例参考或内里大叔头部的可选辅助。
-当前进度：规格书 v0.1 已建立，参考图已复制到 art/refs；Blender 尚未安装；没有生成任何模型。
-最后待确认：用户对规格书第 12 节关键决策的确认；是否授权安装 Blender 4.5 LTS。
+当前进度：v1 blockout 已生成（23 网格 / 8,364 tris / 13 骨骼 / idle+run），Blender 4.5.15 已装在 D:\tools\blender-4.5.15-windows-x64；6 张渲染与 .blend/.glb 已产出，verify_export.py + check_asset.py 均通过。
+最后待确认：用户对 6 张渲染的比例确认；规格书第 12 节决策（v1 已按推荐默认值实现）。
 
-请先阅读 docs/character_spec.md，确认关键决策；再确认 Blender 是否已安装，若未安装，先征得用户同意再安装 4.5 LTS。
-下一步：写 build_eliz_v1.py，生成外壳/底口/内衬/嘴眼/鸭蹼/毛腿/简单骨骼，渲染四视图和一个跑步露腿姿势，保存 .blend 和 .glb。
+请先看 art\renders\v1_*.png 和 docs\character_spec.md 第 17 节（v1 产出记录 + 已知简化）；再决定是调比例还是进 v1.5 细化（鸭蹼脚型 / 牌子握持 / 描边与布料 / walk+jump+hit）。
+复现：& "D:\tools\blender-4.5.15-windows-x64\blender.exe" --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v1.py"
+命令一律用 PowerShell，Blender 用全路径调用，并带 --background --factory-startup --python-exit-code 1。
 不要重新讨论 Tripo vs Blender；外壳已决定用 Blender 直接建。
 ```
 
@@ -474,4 +544,16 @@ Blender 安装仍待确认：授权安装 4.5 LTS 到 `/Applications`，或用�
 
 ## 12. 一句话交接
 
-**项目目前停在“规格书 v0.1 已建立、关键决策待确认、工具未装、模型未建”的阶段；下一步是先确认规格书，再装 Blender，做玩偶服 blockout，重点验证“待机藏腿、跑步露腿、壳腿分离绑定”这三件事。**
+**项目目前停在“规格书 v0.1（Windows 版）已建立、关键决策待确认、Blender 未安装、模型未建”的阶段；下一步是先确认规格书，再把 Blender 4.5.15 LTS 便携版装到 `D:\tools\`，写 `scripts\build_eliz_v1.py` 做玩偶服 blockout，重点验证“待机藏腿、跑步露腿、壳腿分离绑定”这三件事。**
+
+---
+
+## 13. 文档变更记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-11-09 | 建立 `docs/character_spec.md` v0.1 与本文档（macOS 版）。 |
+| 2026-11-09 | Git 仓库初始化并推送 GitHub；记录 commit `d2fc2f2`。 |
+| 2026-11-09 | **整体改写为 Windows 版**：环境表、安装与验证命令、路径、Git 状态、参考图链接全部按本机实测重写；绑定方案对齐规格书（13–15 根，去掉 `spine`/`head`）；毛簇统一为 12–16；面数预算与规格书统一；新增 Windows 环境风险一节。 |
+| 2026-11-09 | **v1 blockout 完成**：装 Blender 4.5.15 便携版，写 `build_eliz_v1.py` / `render_views.py` / `verify_export.py`；产出 6 张渲染、`.blend`、`.glb`；GLB 重导入校验通过（1.800 m / 13 骨 / idle+run）。 |
+| 2026-11-09 | **v1 验收加固**：外壳加密 + 加裙摆卷边（→ 8,364 tris）、修牌杆端 n-gon、脚踝开口居中、跑步壳抬 0.19 m；新增 `check_asset.py`：待机漏腿 0、跑步露出 0.184 m、壳腿隔离 Δ=0、鞋跟脚、下颌只动下嘴，全部 `CHECK_OK`。 |

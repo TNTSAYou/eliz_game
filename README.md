@@ -2,8 +2,9 @@
 
 以《银魂》伊丽莎白为核心的 3D 角色项目。
 
-> **当前阶段：规格书 v0.1，尚未开始建模。**
-> 下一步：确认规格书关键决策 → 安装 Blender 4.5 LTS → 用脚本做 blockout。
+> **当前阶段：v1 blockout 已生成**（23 个网格对象 / 8,364 tris / 13 骨骼 / idle + run 两个动作）。
+> 平台：Windows 11 x64，仓库 `D:\work\eliz_game`；Blender 4.5.15 LTS 便携版在 `D:\tools\blender-4.5.15-windows-x64\`。
+> 产物：`art\blender\eliz_costume_v1.blend`、`art\exports\eliz_costume_v1.glb`、`art\renders\v1_*.png`（6 张）。
 
 ## 项目概念
 
@@ -24,8 +25,8 @@
 
 ## 当前文档
 
-- [角色规格书 v0.1](docs/character_spec.md) —— 尺寸、分件、材质、绑定、动画、验收标准与待确认决策。
-- [会话交接文档](docs/HANDOFF.md) —— 项目背景、讨论结论与当前进度。
+- [角色规格书 v0.1](docs/character_spec.md) —— 尺寸、分件、材质、绑定、动画、验收标准、待决策项与 v1 产出记录。
+- [会话交接文档](docs/HANDOFF.md) —— 项目背景、讨论结论、当前进度与已知限制。
 
 ## 目录结构
 
@@ -36,24 +37,57 @@ eliz_game/
     HANDOFF.md
   art/
     refs/          # 参考图（版权说明见 art/refs/README.md）
-    blender/       # .blend 工作文件（尚未生成）
-    exports/       # GLB/FBX 导出（尚未生成）
-    renders/       # 预览渲染（尚未生成）
-  scripts/         # Blender bpy 脚本（尚未生成）
+    blender/       # eliz_costume_v1.blend
+    exports/       # eliz_costume_v1.glb
+    renders/       # v1_front / side / back / three_quarter / run_reveal / sign_pose
+  scripts/
+    build_eliz_v1.py   # 建模 + 渲染 + 导出
+    render_views.py    # 只重渲 v1_* 图
+    verify_export.py   # 重导入 GLB 并校验
+    check_asset.py     # 验收检查（拓扑/权重/壳腿隔离/遮挡）
+  tools/           # Blender 便携版解压目录（不入库）
 ```
+
+## v1 产出
+
+| 文件 | 说明 |
+|---|---|
+| [eliz_costume_v1.blend](art/blender/eliz_costume_v1.blend) | 场景 + 13 骨骼 + 渲染相机灯光 |
+| [eliz_costume_v1.glb](art/exports/eliz_costume_v1.glb) | 23 网格 + 13 骨骼 + `idle` / `run` 动画 |
+| [v1_front.png](art/renders/v1_front.png) · [v1_side.png](art/renders/v1_side.png) · [v1_back.png](art/renders/v1_back.png) · [v1_three_quarter.png](art/renders/v1_three_quarter.png) | 四视图（正交） |
+| [v1_run_reveal.png](art/renders/v1_run_reveal.png) | 壳抬起、露出毛腿 |
+| [v1_sign_pose.png](art/renders/v1_sign_pose.png) | 牌子 / 袖口姿态检查 |
+
+## 复现
+
+```powershell
+Set-Location D:\work\eliz_game
+$B = "D:\tools\blender-4.5.15-windows-x64\blender.exe"
+
+# 建模 + 渲染 + 导出
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\build_eliz_v1.py"
+
+# 校验 GLB（重导入，检查高度/骨骼/动画/面数）
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\verify_export.py"
+
+# 验收检查（拓扑/权重/壳腿隔离/下颌/待机遮挡）
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\check_asset.py"
+
+# 只重渲，不重建
+& $B --background --factory-startup --python-exit-code 1 --python "scripts\render_views.py"
+```
+
+## 下一步
+
+1. 看 `art\renders\` 的 6 张图，确认比例（壳形、头的圆度、裙摆收口、露腿高度）。
+2. 按反馈改 `scripts\build_eliz_v1.py` 顶部的尺寸常量，重跑即可复现。
+3. v1.5：鸭蹼脚型、牌子握持、眼睑/眨眼、赛璐璐描边与布料质感、`walk`/`jump`/`hit` 动画。
 
 ## 参考图
 
 4 张参考图已放在 [`art/refs/`](art/refs/)，包括正面全身、动画截图、撑伞行走、举牌半身。
 
 这些图片仅用于本项目内部的视觉参考，版权归原作者/版权方所有；**不要在公开仓库中再分发，也不要用于商业用途**。如果仓库是公开的，建议删除图片或只保留原始来源链接。详见 [`art/refs/README.md`](art/refs/README.md)。
-
-## 下一步
-
-1. 确认 [`docs/character_spec.md`](docs/character_spec.md) 第 12 节的待确认决策。
-2. 安装 Blender 4.5 LTS，或用已有安装。
-3. 编写 `scripts/build_eliz_v1.py`，生成外壳、底口、内衬、嘴眼、鸭蹼、毛腿和简单骨骼。
-4. 渲染四视图 + 跑步露腿姿势，确认比例后再细化。
 
 ## 版权说明
 

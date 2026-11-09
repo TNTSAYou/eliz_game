@@ -7,6 +7,9 @@ __pycache__/
 *.pyc
 .venv/
 
+# Blender 便携版解压目录（Windows，不进仓库）
+tools/
+
 # 生成物较大时，可按需取消注释：
 # art/exports/*.glb
 # art/exports/*.fbx
