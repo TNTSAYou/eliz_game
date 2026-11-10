@@ -14,3 +14,8 @@ tools/
 # art/exports/*.glb
 # art/exports/*.fbx
 # art/renders/*.png
+
+# 网页原型
+node_modules/
+.edge-*/
+web/shots/

@@ -1,0 +1,11 @@
+{
+  "name": "eliz-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Elizabeth 网页可玩原型（M0+M1 竖切片）",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  }
+}

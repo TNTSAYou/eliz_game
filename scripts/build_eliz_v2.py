@@ -453,8 +453,10 @@ def _cavity_solid():
           1.03, 1.12, 1.21, 1.31, 1.41, 1.50, 1.58, 1.64]
     prof = [(0.0, -0.02), (inner_r(HEM_Z), -0.02), (inner_r(HEM_Z), HEM_Z)]
     for z in zs:
-        prof.append((inner_r(z), z))
-    prof.append((0.0, 1.680))          # flat inner ceiling, thick top wall
+        # near the dome tip body_r shrinks faster than inner_r, so an unbounded
+        # void pokes through the crown and the difference dents the head
+        prof.append((min(inner_r(z), body_r(z) - 0.030), z))
+    prof.append((0.0, 1.700))          # flat inner ceiling, thick top wall
     return _revolve(prof, SEG_BODY)
 
 
@@ -535,8 +537,20 @@ def build_shell(colls):
     recalc_normals(cutter)
     _boolean(shell, cutter, "DIFFERENCE")
 
-    # soft 14 mm fillet along the armholes and the hem rim
-    _bevel(shell, width=0.016, segments=4, angle_deg=30.0)
+    # soft fillet along the armholes and the hem rim.  12 deg (not 30) so the
+    # shallow sleeve/body crease is included: at 30 deg it stayed a sharp wedge
+    # that rendered as a black slit on the left shoulder.
+    _bevel(shell, width=0.018, segments=4, angle_deg=12.0)
+
+    # the bevel can leave degenerate slivers where it cuts a 2.5 cm double wall
+    # from both sides; weld them and re-orient so the crown has no flipped flap
+    bm = bmesh.new()
+    bm.from_mesh(shell.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0012)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(shell.data)
+    bm.free()
+    shell.data.update()
     apply_folds(shell)
     apply_cylindrical_uv(shell)
     bpy.context.view_layer.update()
@@ -954,6 +968,9 @@ def build_legs(colls):
         verts, faces = lathe(profile, seg, cap_top=True, cap_bottom=True)
         verts = [(x + x0, y, z) for (x, y, z) in verts]
         objs[side] = add_mesh(f"INNER_Leg_{side}", verts, faces, "M_Skin", colls["INNER"])
+        # lathe() winds the tube inward; without this the legs are inside-out
+        # and cloth collision / backface culling treat them as a hole
+        recalc_normals(objs[side])
     return objs
 
 

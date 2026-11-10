@@ -254,6 +254,8 @@ v2：把肩做成连续曲面——从 z≈1.10 起用一条指数曲线收到�
 | Subsurface | 0.02（可选） | 只给近景一点点透感 |
 
 > 现实里的伊丽莎白是**白色短毛绒**（fleece/velour 一类），已选定按这个方向做（D2 = 短毛绒）。
+>
+> **v5 反转（2026-11-10）**：用户 review 指出示例图是光滑外套，D2 改为**光滑棉布**——去掉 sheen / 绒面法线，只保留极细织纹。见 §19。
 
 ### 7.3 贴图与 UV
 
@@ -330,9 +332,9 @@ v1 的脚本与产物**保留不动**，v2 另起一套，方便对照。
 | M1 | 嘴缝中–端高差 | 0.030 ± 0.005 |
 | M2 | 嘴缝槽深 | ≥ 0.005 |
 | M3 | 张嘴 40°：上嘴位移 / 下嘴位移 | 0 / 0.16–0.18 |
-| T1 | 材质含法线贴图 + 粗糙度贴图 | 是 |
-| T2 | sheen weight | ≥ 0.40 |
-| T3 | UV 层存在、贴图可平铺 | 是 |
+| T1 | 材质含法线贴图 + 粗糙度贴图 | 是（**v5 起豁免**：光滑棉布不嵌贴图，见 §19.3 H15） |
+| T2 | sheen weight | ≥ 0.40（**v5 反转**：= 0，见 §19.3 H15） |
+| T3 | UV 层存在、贴图可平铺 | 是（**v5 起不适用**） |
 | E1 | GLB 重导入：网格/骨骼/动作/贴图 | 全部通过 |
 | E2 | GLB 体积 | ≤ 4 MB |
 | V1 | 正面剪影 IoU | ≥ 0.93 |
@@ -726,6 +728,162 @@ hem_i_b: -2° + 12°*s + 3°*sin(phase + i*pi/4 + pi/2) # 边缘卷起，滞后 
 门槛随行为更新：H5 下摆倾角 ≤ **12°**（腿顶布本来就该让下摆倾斜）、H3 滞后 **2–4 帧**、H4 改为"整循环半径幅值 ≥ 0.05 m"（不再是 f4 vs f10，因为现在下摆主要跟着腿走）。
 
 **遗留**：残余 3 个顶点在 4 mm 的"贴合"范围内（视为接触）；要让它们彻底消失，需要把下摆权重带再往下收，代价是裙摆会开始"硬"。当前取舍是"布料贴着腿但不穿过去"。
+
+---
+
+## 19. v5：真布褶皱 + 光滑外套（2026-11-10）
+
+> 状态：**已实施**。产物 `art/blender/eliz_costume_v5.blend`、`art/exports/eliz_costume_v5.glb`（2.14 MB）、`art/renders/v5_*`。
+> 触发：用户 review v4.1 跑动——"外层布料随内部骨架运动的褶皱感很差"；"毛绒绒的外套不符合要求，示例图是光滑的"。
+
+### 19.1 现象与关键测量
+
+v4.1 的壳在 z 0.5–1.8 有 4,244 个顶点（58%）没有任何下摆骨权重，其中 2,988 个只受 `shell`/`shell_up`/`shell_top` 三根躯干骨影响；褶皱是 `apply_folds` 一次性写死的 3–24 mm 静态位移。跑动只有 8 片下摆旋转 + 外壳缩放，所以"骨架动、布不起褶"。
+
+把 `M_Suit` 换成纯灰哑光后重渲（`tools/_review/clay_side_f09.png`）：壳面几乎完全光滑——**不是毛绒盖住褶皱，是几何本身没有褶皱**。因此 v5 必须同时改材质与几何。
+
+另一个必须先说清楚的物理事实：z=0.5 处腿半径 7.6 cm、腿中心 x=±0.215、裙摆半径 43.7 cm，**腿到布的间隙约 14.6 cm**。这套轮廓下"腿把布顶出褶"不会发生；能发生的是布自身垂坠、腰部聚拢、跑动弹跳/摆动带来的褶皱。
+
+### 19.2 设计
+
+**A. 布料层（`scripts/cloth_v5.py`）**
+
+| 项 | 值 |
+|---|---|
+| 代理网格 | 单层 quad，128 段 × 40 环，z 1.25（胸）→ −0.06（地下） |
+| 松量 | 胸口 5.5% → 下摆 22%（`_slack`） |
+| 破对称 | 10 / 17 波径向 flutes，胸口 2.8% → 下摆 4% |
+| pin | 顶环 `vertex_group_mass = "PIN"`（Blender 4.5 的 Pin Vertex Group RNA 名） |
+| 碰撞体 | 身体 egg（`body_r*0.955`，z 0–1.28）+ 地面 |
+| 布料参数 | mass 0.08，tension/compression 4，shear 1.5，bending 0.08，quality 10 |
+| 驱动 | 地面 z = `1.6*(0.272−lift(f))`（跑动弹跳在服内坐标系里的相对运动）；身体碰撞体 x 摆 ±2 cm |
+| 烘焙 | 48 帧 settle + 3×24 帧循环，共 120 帧，`bpy.ops.ptcache.bake` + `temp_override` |
+| 褶皱场 | 逐环去均值 → 1 次环向平滑 → 按 (θ,z) 双线性采样 |
+| 应用到壳 | 径向 + z 位移；scale 1.8；外凸 ≤60 mm、内凹 ≤30 mm；袖窿/顶部/摆边渐隐 |
+| 形态键 | 8 个（sim 帧 97/100/103/106/109/112/115/118，对应 run 1/4/7/10/13/16/19/22） |
+
+**B. 形态键导出（关键）**
+
+Blender 4.5 的 glTF 导出在 `ACTIONS` 模式下会把骨骼动作和形态键动作拆成两个 animation（`run` + `SUIT_ShellAction`）。v5 改为：
+
+- 骨骼：原有 `idle` / `run` NLA track。
+- 形态键：`idle_morph` / `run_morph` 两个 action，stash 到**同名** NLA track（`idle` / `run`）。
+- 导出 `export_animation_mode="NLA_TRACKS"`，`export_apply=False`。
+
+实测每个 animation **97 条通道**（96 骨骼 + 1 weights），`idle` 的权重为 `[1,0,…]`（使用中性垂坠键），`run` 的权重在 8 个键之间循环。
+
+**C. 材质与描边**
+
+- `M_Suit`：`#ECEBE7`、roughness 0.62、specular 0.28、**Sheen 0**、无法线贴图；GLB 不嵌贴图。
+- 描边拆两条 lineset：
+  - `Coat`（COAT collection，只有 `SUIT_Shell`）：**external contour only**。褶皱会产生 view-dependent silhouette，若用普通 silhouette 会把每条褶画成黑色划痕。
+  - `Detail`（DETAIL collection，脸/鞋/腿/牌子）：silhouette + border，保留五官和鞋子轮廓。
+
+**D. 头发**
+
+内层阴毛锥体原本离壳内壁只有 1–2 cm，褶皱内凹后会被夹进布料厚度；v5 把 `INNER_Hair` 向腿中心收 20%（`build_eliz_v5.py`），视觉上几乎不变，但消除了 4 个接触点。
+
+### 19.3 验收（H12–H18）
+
+| 编号 | 检查 | 阈值 | 实测 |
+|---|---|---|---|
+| H12 | 形态键数量 | 8 | 8 |
+| H13 | 褶皱幅度 p90（相对 basis） | ≥ 13 mm | **14.1–15.0 mm** |
+| H14 | 褶皱峰值（z≈0.45 环向） | 6–12 | **7** |
+| H15 | 材质 | Sheen=0、无绒面法线、roughness 0.55–0.70 | **0 / 0 / 0.62** |
+| H16 | morph 循环 + 权重和 | f1==f25、Σ=1 | 通过 |
+| H17 | GLB | 8 targets、idle+run 含 weights、≤4 MB | **8 / 都是 / 2.07 MB** |
+| H18 | 腿部穿模 | 外壁穿透 ≤2；最深 ≤10 mm（鞋可在外） | **2 / 9.0 mm** |
+
+`scripts/check_v5.py` → **CHECK_V5_OK**；`scripts/probe_leg_clip_v5.py` → **CLIP_V5_OK**（v4.1 基线：3 个接触点、最深 3.8 mm）。
+
+### 19.4 实施记录
+
+**产物**
+
+- 资产：`art/blender/eliz_costume_v5.blend`、`art/exports/eliz_costume_v5.glb`（2.14 MB，32 骨、8 morph、0 贴图）
+- 渲染：`art/renders/v5_front/side/back/three_quarter.png`、`v5_detail_folds.png`、`v5_run.gif/mp4`（3/4）、`v5_run_side.gif/mp4`、`v5_compare_side.png`
+- 脚本：`scripts/build_eliz_v5.py`、`scripts/cloth_v5.py`、`scripts/render_v5_views.py`、`scripts/check_v5.py`、`scripts/probe_leg_clip_v5.py`
+- 帧：`tools/v5_run_frames/{three_quarter,side}/frame_001..024.png`
+
+**编码 GIF / MP4（ffmpeg）**
+
+```powershell
+$f = "D:\qqbot\ffmpeg\bin\ffmpeg.exe"
+$T = "tools\v5_run_frames"
+foreach ($v in @("three_quarter", "side")) {
+  $out = if ($v -eq "three_quarter") { "v5_run" } else { "v5_run_side" }
+  & $f -y -framerate 12 -i "$T\$v\frame_%03d.png" -filter_complex `
+      "scale=384:-1,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer" `
+      -loop 0 "art\renders\$out.gif"
+  & $f -y -framerate 12 -i "$T\$v\frame_%03d.png" -c:v libx264 -pix_fmt yuv420p -crf 20 `
+      "art\renders\$out.mp4"
+}
+```
+
+**与设计的偏差**
+
+| 项 | 计划 | 实际 | 原因 |
+|---|---|---|---|
+| 上半身 proxy | 延伸到胸口 z=1.25 | 已实现 | 腰/胸褶皱来自这一层 |
+| 运动驱动 | moving pin / `use_dynamic_mesh` | 地面碰撞体按 lift 移动 + 身体 x 摆 | 4.5 下 headless 的 moving pin 需要额外验证；先用地面对应弹跳，稳定可复现 |
+| 形态键数 | 8–12 | **8** | 8 键已覆盖 24 帧循环，GLB 2.14 MB |
+| 描边 | 单 lineset | **Coat + Detail 两条** | 褶皱的 view-dependent silhouette 会变成划痕 |
+| 头发 | 不动 | 向内收 20% | 消除褶皱内凹造成的 4 个接触点 |
+
+**已知限制**
+
+1. **褶皱是“弹跳/垂坠驱动”，不是“腿驱动”**：腿离布 14.6 cm，没有接触；这是轮廓决定的。
+2. **不是 moving-pin 惯性**：地面/身体碰撞体在服内坐标系里运动，褶皱会随落地/腾空变化，但没有真实的下摆滞后/甩动惯性。
+3. **按 clip 烘焙**：`run` 的 8 个键只对 run 有效；walk/jump 需要各自再烘一遍，或改为运行时布料。
+4. **上半身仍以垂褶为主**：腋下/袖窿的局部挤压褶没有单独做，袖筒仍是骨骼驱动。
+5. **Coat 用 external contour**：手臂与身体的内部交界线不再描边；换来的是没有褶皱划痕。
+
+### 19.5 决策记录（追加）
+
+| 编号 | 决策 | 结论 |
+|---|---|---|
+| **D9** | 外套质感 | 光滑棉布（反转 D2 短毛绒），Sheen 0、无绒面法线 |
+| **D10** | 褶皱实现 | 单层 proxy + Blender Cloth 烘焙成 8 个相对形态键（不用骨骼假装布料） |
+| **D11** | morph 导出 | 骨骼与形态键用同名 NLA track，`NLA_TRACKS` 模式合并成一个 animation |
+
+---
+
+### 19.6 v5.1 长外套修正（2026-11-10，按用户 review 三条）
+
+用户 review v5 跑动：① 下摆有不自然卷起；② 身体被不自然拉长；③ 外套不够长，示例图是拖地的。
+
+**根因与改动**
+
+| 问题 | 根因 | 改动 |
+|---|---|---|
+| 下摆卷起 | v4.1 的 8 片 `hem_*_a/b` 外翻 20° + 边缘卷起 + 径向推移还在 | 删除 `hem_*` 面板骨的全部 rotation/location fcurve（保留 `hem_root` 反重力）；褶皱只由 Cloth 形态键提供 |
+| 身体拉长 | `soft_shell_channels` 给 `shell` 骨做 squash/stretch（squash 0.93 / stretch 1.035） | 删除 `shell.scale` fcurve；run 的 `shell` 缩放恒为 1，弹跳只靠位移 + 形态键 |
+| 外套不够长 | 待机下摆本来就在 z=0.02，跑动 `shell` 抬升 0.200–0.272，把下摆抬到 0.20–0.265 | 抬升降为 **0.020–0.090**；下摆跑动时 0.04–0.09；下摆静态外扩 +22%；大腿摆幅 ×0.5；前倾 −10°→−3°；头发再收 0.55 |
+
+**重烘与数据**
+
+- 用新的 lift 曲线重跑 `cloth_v5`（地面 `1.5*(0.090−lift)`），8 个形态键重烘；`idle` 仍用中性垂坠键。
+- 外套下摆现在盖住腿，跑动只露鸭蹼鞋（"拖地优先，少露腿"）。
+- 验收：`check_v5.py` → **CHECK_V5_OK**（p90 14.1–15.0 mm、7 个环向褶、GLB **2.07 MB**）；`probe_leg_clip_v5.py` → **CLIP_V5_OK**（2 个残余顶点、最深 9 mm；鞋在衣外属预期，不计）。
+- 侧面对比：`art/renders/v5_compare_side.png`。
+
+**新增/变更文件**
+
+- `scripts/build_eliz_v5.py`：`retune_run()`（删 hem/scale、重写 lift）、`V5_LIFT`/`run_lift_v5()`、下摆 +22% 静态外扩、大腿摆幅 ×0.5、前倾 −3°。
+- `scripts/cloth_v5.py`：地面公式改 `1.5*(0.090−lift)`；内凹 clamp 3 cm→1.5 cm。
+- `scripts/probe_leg_clip_v5.py`：只检查 `INNER_Leg`/`INNER_Hair` 的 z>0.20 区域；鞋允许在衣外；允许 ≤2 个残余接触（≤10 mm）。
+
+**限制**
+
+- 长外套 + 闭口下摆会盖住腿；如果以后要"跑动露毛腿"，需要前摆开衩或前短后长的高低下摆，不能靠整体抬升（抬升会把整件外套抬成短裙）。
+- 布料仍是"弹跳/地面驱动"，不是 moving-pin 惯性；`walk`/`jump` 需要各自烘焙。
+
+**决策记录（追加）**
+
+| 编号 | 决策 | 结论 |
+|---|---|---|
+| **D12** | 跑动外观 | 拖地优先、少露腿：外套盖住腿，只露鸭蹼鞋；去掉 hem 外翻/卷边与 shell 缩放 |
 
 ---
 

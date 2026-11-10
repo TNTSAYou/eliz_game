@@ -1,0 +1,251 @@
+:root {
+  --ink: #1d2530;
+  --ink-soft: #4a5766;
+  --paper: rgba(255, 255, 255, 0.78);
+  --line: rgba(29, 37, 48, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #dfe4ea;
+  color: var(--ink);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#app canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  cursor: grab;
+}
+
+#app canvas:active {
+  cursor: grabbing;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: fixed;
+  top: 22px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#hud .title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+#hud h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+#hud .ver {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  opacity: 0.8;
+}
+
+#hud .keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+#hud .keys li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#hud .keys em {
+  font-style: normal;
+  margin-left: 2px;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--paper);
+  font: 600 11px/1 "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+/* ---------- stats ---------- */
+#stats {
+  position: fixed;
+  left: 24px;
+  bottom: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  user-select: none;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+#stats #fps:empty,
+#stats #state:empty {
+  display: none;
+}
+
+#stats #fps,
+#stats #state {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#stats #state[data-state="run"] {
+  color: #8a4a12;
+  background: rgba(255, 236, 214, 0.85);
+  border-color: rgba(138, 74, 18, 0.22);
+}
+
+#stats .note {
+  margin-left: auto;
+  opacity: 0.62;
+  max-width: 52ch;
+  text-align: right;
+  line-height: 1.5;
+}
+
+#stats .note code {
+  font-size: 10px;
+}
+
+/* ---------- loading ---------- */
+#loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #dfe4ea;
+  transition: opacity 0.5s ease;
+  z-index: 10;
+}
+
+#loading.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.load-box {
+  width: min(320px, 70vw);
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.load-box .bar {
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(29, 37, 48, 0.12);
+  overflow: hidden;
+}
+
+.load-box .bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--ink);
+  transition: width 0.25s ease;
+}
+
+.load-box p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 2px 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.load-box b {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* ---------- error ---------- */
+#error {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(223, 228, 234, 0.96);
+  z-index: 20;
+}
+
+#error[hidden] {
+  display: none;
+}
+
+.err-box {
+  max-width: min(680px, 82vw);
+  padding: 22px 26px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(24, 33, 44, 0.14);
+}
+
+.err-box h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+
+.err-box pre {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #a3352b;
+}
+
+body.no-hud #hud,
+body.no-hud #stats {
+  display: none;
+}
